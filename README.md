@@ -11,9 +11,13 @@ Le protocole BLE utilisé n'était pas documenté publiquement. Il a été recon
 ## Ce que fait l'application
 
 1. Se connecte en BLE à l'enceinte secondaire — la connexion suffit à la sortir de veille
-2. Se connecte à l'enceinte principale, et lui indique l'adresse Bluetooth du téléphone pour l'audio
-3. Envoie la commande de liaison stéréo aux deux, à 250 ms d'intervalle
-4. Ferme les connexions
+2. Attend qu'elle réponde vraiment : une enceinte endormie accepte la connexion bien avant d'être capable de traiter une commande
+3. Fait de même avec l'enceinte principale, et lui indique l'adresse Bluetooth du téléphone
+4. Envoie la commande de liaison stéréo aux deux, à 250 ms d'intervalle
+5. Vérifie que l'enceinte principale a bien rejoint le téléphone en audio, et relance l'invitation sinon
+6. Ferme les connexions
+
+Un second appui sur le bouton remet les deux enceintes en veille.
 
 La liaison stéréo survit à la fermeture des connexions BLE : l'application n'a rien à maintenir ensuite.
 
@@ -27,11 +31,17 @@ Rien à modifier dans le code. Au premier lancement, l'application :
 
 Ces réglages sont conservés dans les préférences de l'application : ils **survivent aux mises à jour** et sont repris par la sauvegarde Android en cas de changement de téléphone. Seule une désinstallation les efface.
 
-Pour les changer ensuite, appui long sur le nom des enceintes en bas de l'écran.
+Pour les changer ensuite, appui long sur le nom des enceintes en bas de l'écran. Un appui simple permet de choisir l'application musicale ouverte depuis le raccourci de l'écran principal.
 
 L'adresse du téléphone est transmise à l'enceinte principale pour qu'elle vienne s'y connecter en A2DP. Android ne permet plus toujours de la lire par programme ; si la détection échoue, elle se trouve dans **Réglages → À propos du téléphone → État → Adresse Bluetooth**. La laisser vide est possible : l'application n'enverra simplement pas cette commande.
 
 L'attribution des canaux gauche et droite est stockée dans les enceintes elles-mêmes. Faites l'appairage initial une fois avec l'application JBL officielle ; ensuite celle-ci se contente de rétablir la liaison.
+
+## Signature
+
+Le dépôt contient une clé de débogage (`debug.keystore`) volontairement versionnée. Sans clé fixe, chaque compilation produirait une signature différente et Android refuserait d'installer la mise à jour par-dessus la précédente, obligeant à désinstaller — et donc à perdre les réglages.
+
+Cette clé n'a aucune valeur secrète. Pour une diffusion large, générez votre propre clé de publication et passez-la par les secrets GitHub.
 
 ## Obtenir l'APK
 
@@ -64,9 +74,16 @@ adb shell am start -n fr.boitedefete/.TriggerActivity
 - Classe : `fr.boitedefete.TriggerActivity`
 - Cible : Activité
 
+**Routines Samsung** — les routines ne savent que « ouvrir une application ». L'application installe donc deux raccourcis supplémentaires dans le lanceur, qui apparaissent dans leur liste :
+
+- **Démarrer** — réveille les enceintes et établit la paire stéréo
+- **Veille** — remet les deux enceintes en veille
+
+Dans *Paramètres → Modes et routines → Routines → +*, choisissez votre déclencheur sous **Si**, puis sous **Alors** l'action *Ouvrir une application* et sélectionnez le raccourci voulu. Aucune interface ne s'affiche : la séquence s'exécute puis rend la main.
+
 **Home Assistant**, via l'intégration Android compagnon et une commande à distance, ou depuis un Tasker déclenché par MQTT.
 
-Pour rompre la paire stéréo, utilisez l'action `fr.boitedefete.action.UNLINK`.
+Pour rompre la paire stéréo sans éteindre, utilisez l'action `fr.boitedefete.action.UNLINK`. Pour la mise en veille, `fr.boitedefete.action.POWER_OFF`.
 
 Quelques idées de déclencheurs : à l'ouverture d'une application de musique, à l'arrivée sur le réseau Wi-Fi de la maison, ou sur une alarme du matin.
 

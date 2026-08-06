@@ -24,6 +24,14 @@
         android:name="android.hardware.bluetooth_le"
         android:required="true" />
 
+    <!-- Necessaire depuis Android 11 pour lister les applications musicales. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_MUSIC" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -43,7 +51,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Point d'entree pour Tasker, Home Assistant, adb... -->
+        <!-- Point d'entree sans interface, pour Tasker, Home Assistant ou adb. -->
         <activity
             android:name=".TriggerActivity"
             android:exported="true"
@@ -53,13 +61,47 @@
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
                 <action android:name="fr.boitedefete.action.START" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
                 <action android:name="fr.boitedefete.action.UNLINK" />
+                <action android:name="fr.boitedefete.action.POWER_OFF" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!--
+            Raccourcis visibles dans le lanceur.
+
+            Les routines Samsung ne savent déclencher que l'ouverture d'une
+            application : ces deux entrées apparaissent donc dans leur liste et
+            permettent de lancer l'appairage ou la mise en veille sans passer par
+            l'interface.
+        -->
+        <activity-alias
+            android:name=".StartShortcut"
+            android:targetActivity=".TriggerActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/shortcut_start"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".StandbyShortcut"
+            android:targetActivity=".TriggerActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/shortcut_standby"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".PartyService"

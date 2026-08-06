@@ -14,8 +14,6 @@
     <string name="step_failed">Failed</string>
 
     <!-- Ecran principal -->
-    <string name="channel_left">L</string>
-    <string name="channel_right">R</string>
     <string name="reconfigure_hint">Long press to reconfigure</string>
 
     <!-- Permission -->
@@ -48,4 +46,22 @@
     <string name="error_connection_lost">Lost connection with %1$s</string>
     <string name="error_no_service">%1$s does not expose the expected service</string>
     <string name="error_unknown">Unknown error</string>
+    <string name="step_powering_off">Going to standby</string>
+    <string name="step_connecting_audio">Connecting audio</string>
+    <string name="press_again_to_sleep">Press again to put both speakers to sleep</string>
+    <string name="open_music">Open music</string>
+    <string name="pick_music_app">Choose a music app</string>
+    <string name="pick_music_hint">Shown as a shortcut on the main screen once the speakers are ready.</string>
+    <string name="pick_music_none">No music app found on this phone.</string>
+    <string name="shortcut_start">Party Pair — Start</string>
+    <string name="shortcut_standby">Party Pair — Standby</string>
+    <string name="info_tagline">Wakes two JBL PartyBox speakers and links them in wireless stereo.</string>
+    <string name="info_version">Version</string>
+    <string name="info_build">Built on</string>
+    <string name="info_license">Licence</string>
+    <string name="info_repo">Source code</string>
+    <string name="info_issues">Report an issue</string>
+    <string name="info_license_link">Read the licence</string>
+    <string name="info_back">Back</string>
+    <string name="info_disclaimer">Independent project, unaffiliated with Harman or JBL. The protocol was reconstructed for interoperability purposes.</string>
 </resources>

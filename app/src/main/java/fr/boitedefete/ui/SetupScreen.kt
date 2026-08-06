@@ -166,18 +166,8 @@ private fun SpeakerStep(
     }
 
     LazyColumn {
-        if (pairedShown.isNotEmpty()) {
-            item { SectionLabel(stringResource(R.string.section_paired)) }
-            items(pairedShown) { device ->
-                DeviceRow(
-                    name = device.name,
-                    detail = device.mac,
-                    highlighted = false,
-                    onClick = { onPick(device) }
-                )
-            }
-        }
-
+        // Les appareils reperes par la recherche viennent en premier : c'est ce
+        // que l'on vient de declencher, et l'enceinte secondaire s'y trouve.
         if (foundShown.isNotEmpty()) {
             item { SectionLabel(stringResource(R.string.section_nearby)) }
             items(foundShown) { device ->
@@ -190,15 +180,24 @@ private fun SpeakerStep(
             }
         }
 
+        if (pairedShown.isNotEmpty()) {
+            item { SectionLabel(stringResource(R.string.section_paired)) }
+            items(pairedShown) { device ->
+                DeviceRow(
+                    name = device.name,
+                    detail = device.mac,
+                    highlighted = false,
+                    onClick = { onPick(device) }
+                )
+            }
+        }
+
         if (!scanning && !showEverything && found.isEmpty()) {
             item {
-                TextButton(
-                    onClick = { launchScan(true) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                TextButton(onClick = { launchScan(true) }, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         stringResource(R.string.scan_all).uppercase(),
-                        style = Silkscreen.copy(fontSize = 10.sp),
+                        style = Silkscreen.copy(fontSize = 11.sp),
                         color = Party.Muted
                     )
                 }

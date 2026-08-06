@@ -1,14 +1,18 @@
 package fr.boitedefete
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,10 +22,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,11 +40,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import fr.boitedefete.ui.BoiteDeFeteTheme
+import fr.boitedefete.ui.Body
 import fr.boitedefete.ui.Display
 import fr.boitedefete.ui.DriverButton
+import fr.boitedefete.ui.InfoScreen
+import fr.boitedefete.ui.MusicAppPicker
+import fr.boitedefete.ui.MusicButton
 import fr.boitedefete.ui.Party
 import fr.boitedefete.ui.SetupScreen
 import fr.boitedefete.ui.Silkscreen
+
+private enum class Screen { PARTY, SETUP, INFO, MUSIC_PICKER }
 
 class MainActivity : ComponentActivity() {
 
@@ -61,30 +70,70 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = Party.Cabinet) {
                     val context = LocalContext.current
                     val settings = remember { Settings(context) }
-                    var configured by remember { mutableStateOf(settings.isConfigured) }
+                    var screen by remember {
+                        mutableStateOf(if (settings.isConfigured) Screen.PARTY else Screen.SETUP)
+                    }
+                    var musicApp by remember { mutableStateOf(settings.musicApp) }
 
                     when {
                         !permissionGranted -> PermissionScreen(onRetry = ::askPermission)
 
-                        !configured -> SetupScreen(
+                        screen == Screen.SETUP -> SetupScreen(
                             paired = Settings.pairedDevices(context),
                             detectedPhoneMac = Settings.detectPhoneMac(context)
                         ) { primary, secondary, phoneMac ->
                             settings.primary = primary
                             settings.secondary = secondary
                             settings.phoneMac = phoneMac
-                            configured = true
+                            screen = Screen.PARTY
                         }
+
+                        screen == Screen.INFO -> InfoScreen(
+                            onOpenUrl = ::openUrl,
+                            onBack = { screen = Screen.PARTY }
+                        )
+
+                        screen == Screen.MUSIC_PICKER -> MusicAppPicker(
+                            apps = Settings.musicApps(context),
+                            onPick = {
+                                settings.musicApp = it
+                                musicApp = it
+                                screen = Screen.PARTY
+                            },
+                            onBack = { screen = Screen.PARTY }
+                        )
 
                         else -> PartyScreen(
                             settings = settings,
-                            onStart = { PartyService.start(this@MainActivity) },
-                            onReconfigure = { settings.clear(); configured = false }
+                            musicApp = musicApp,
+                            onPress = ::togglePower,
+                            onOpenMusic = { openMusicApp(musicApp) },
+                            onPickMusic = { screen = Screen.MUSIC_PICKER },
+                            onInfo = { screen = Screen.INFO },
+                            onReconfigure = { settings.clear(); musicApp = null; screen = Screen.SETUP }
                         )
                     }
                 }
             }
         }
+    }
+
+    /** Un appui reveille et apparie ; le suivant remet les enceintes en veille. */
+    private fun togglePower() {
+        val ready = PartyService.state.value.step == Step.READY
+        PartyService.start(
+            this,
+            if (ready) PartyService.ACTION_POWER_OFF else PartyService.ACTION_START
+        )
+    }
+
+    private fun openMusicApp(packageName: String?) {
+        val intent = packageName?.let { packageManager.getLaunchIntentForPackage(it) } ?: return
+        startActivity(intent)
+    }
+
+    private fun openUrl(url: String) {
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     }
 
     /**
@@ -114,7 +163,7 @@ private fun PermissionScreen(onRetry: () -> Unit) {
     ) {
         Text(
             stringResource(R.string.permission_rationale),
-            style = Silkscreen.copy(letterSpacing = 0.sp),
+            style = Body,
             color = Party.Silkscreen,
             textAlign = TextAlign.Center
         )
@@ -133,7 +182,11 @@ private fun PermissionScreen(onRetry: () -> Unit) {
 @Composable
 private fun PartyScreen(
     settings: Settings,
-    onStart: () -> Unit,
+    musicApp: String?,
+    onPress: () -> Unit,
+    onOpenMusic: () -> Unit,
+    onPickMusic: () -> Unit,
+    onInfo: () -> Unit,
     onReconfigure: () -> Unit
 ) {
     val state by PartyService.state.collectAsState()
@@ -143,12 +196,12 @@ private fun PartyScreen(
         Step.IDLE, Step.FAILED -> 0f
         Step.WAKING_SECONDARY -> 0.25f
         Step.WAKING_PRIMARY -> 0.5f
-        Step.LINKING -> 0.8f
+        Step.LINKING -> 0.75f
+        Step.CONNECTING_AUDIO -> 0.9f
+        Step.POWERING_OFF -> 0.15f
         Step.READY -> 1f
     }
-    val running = state.step != Step.IDLE &&
-        state.step != Step.READY &&
-        state.step != Step.FAILED
+    val running = state.step !in setOf(Step.IDLE, Step.READY, Step.FAILED)
 
     val reducedMotion = android.provider.Settings.Global.getFloat(
         context.contentResolver,
@@ -160,32 +213,37 @@ private fun PartyScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Party.Cabinet)
-            .padding(horizontal = 32.dp, vertical = 48.dp),
+            .padding(horizontal = 24.dp, vertical = 36.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            stringResource(R.string.app_name).uppercase(),
-            style = Display,
-            color = Party.Silkscreen,
-            textAlign = TextAlign.Center
-        )
-
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ChannelMark(stringResource(R.string.channel_left), lit = progress >= 0.5f)
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                DriverButton(
-                    progress = progress,
-                    active = running,
-                    reducedMotion = reducedMotion,
-                    onClick = onStart
-                )
-            }
-            ChannelMark(stringResource(R.string.channel_right), lit = progress >= 0.25f)
+            Text(
+                stringResource(R.string.app_name).uppercase(),
+                style = Display.copy(fontSize = 24.sp),
+                color = Party.Silkscreen
+            )
+            Text(
+                "i",
+                style = Display.copy(fontSize = 20.sp),
+                color = Party.Muted,
+                modifier = Modifier
+                    .clickable(onClick = onInfo)
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            )
+        }
+
+        Box(contentAlignment = Alignment.Center) {
+            DriverButton(
+                progress = progress,
+                active = running,
+                reducedMotion = reducedMotion,
+                onClick = onPress
+            )
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -195,28 +253,52 @@ private fun PartyScreen(
                 color = if (state.step == Step.FAILED) Party.Orange else Party.Silkscreen,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(12.dp))
+
+            if (state.step == Step.READY) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.press_again_to_sleep),
+                    style = Body.copy(fontSize = 13.sp),
+                    color = Party.Muted,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            if (musicApp != null) {
+                MusicButton(
+                    packageName = musicApp,
+                    label = stringResource(R.string.open_music),
+                    onClick = onOpenMusic
+                )
+            } else {
+                TextButton(onClick = onPickMusic) {
+                    Text(
+                        stringResource(R.string.pick_music_app).uppercase(),
+                        style = Silkscreen.copy(fontSize = 13.sp),
+                        color = Party.Muted
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
             Text(
                 text = listOfNotNull(settings.primary?.name, settings.secondary?.name)
                     .joinToString(" · "),
-                style = Silkscreen.copy(letterSpacing = 1.5.sp, fontSize = 11.sp),
+                style = Body.copy(fontSize = 13.sp),
                 color = Party.Muted,
                 modifier = Modifier.combinedClickable(
-                    onClick = {},
+                    onClick = onPickMusic,
                     onLongClick = onReconfigure
                 )
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(R.string.reconfigure_hint),
-                style = Silkscreen.copy(letterSpacing = 0.sp, fontSize = 9.sp),
+                style = Body.copy(fontSize = 12.sp),
                 color = Party.Muted.copy(alpha = 0.6f)
             )
         }
     }
-}
-
-@Composable
-private fun ChannelMark(letter: String, lit: Boolean) {
-    Text(letter, style = Silkscreen, color = if (lit) Party.Orange else Party.Muted)
 }

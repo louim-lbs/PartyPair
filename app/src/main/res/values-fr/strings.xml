@@ -12,8 +12,6 @@
     <string name="step_ready">Prêt</string>
     <string name="step_failed">Échec</string>
 
-    <string name="channel_left">G</string>
-    <string name="channel_right">D</string>
     <string name="reconfigure_hint">Appui long pour reconfigurer</string>
 
     <string name="permission_rationale">L\'accès Bluetooth est nécessaire pour parler aux enceintes.</string>
@@ -43,4 +41,22 @@
     <string name="error_connection_lost">Connexion perdue avec %1$s</string>
     <string name="error_no_service">%1$s ne présente pas le service attendu</string>
     <string name="error_unknown">Erreur inconnue</string>
+    <string name="step_powering_off">Mise en veille</string>
+    <string name="step_connecting_audio">Connexion audio</string>
+    <string name="press_again_to_sleep">Appuyez à nouveau pour mettre les deux enceintes en veille</string>
+    <string name="open_music">Ouvrir la musique</string>
+    <string name="pick_music_app">Choisir une application musicale</string>
+    <string name="pick_music_hint">Elle apparaîtra en raccourci sur l\'écran principal une fois les enceintes prêtes.</string>
+    <string name="pick_music_none">Aucune application musicale trouvée sur ce téléphone.</string>
+    <string name="shortcut_start">Boîte de Fête — Démarrer</string>
+    <string name="shortcut_standby">Boîte de Fête — Veille</string>
+    <string name="info_tagline">Réveille deux enceintes JBL PartyBox et les met en paire stéréo sans fil.</string>
+    <string name="info_version">Version</string>
+    <string name="info_build">Compilée le</string>
+    <string name="info_license">Licence</string>
+    <string name="info_repo">Code source</string>
+    <string name="info_issues">Signaler un problème</string>
+    <string name="info_license_link">Lire la licence</string>
+    <string name="info_back">Retour</string>
+    <string name="info_disclaimer">Projet indépendant, sans lien avec Harman ou JBL. Le protocole a été reconstitué à des fins d\'interopérabilité.</string>
 </resources>

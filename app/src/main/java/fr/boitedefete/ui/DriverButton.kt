@@ -47,7 +47,20 @@ fun DriverButton(
         ),
         label = "excursion"
     )
+    // Battement lent une fois la paire etablie : l'enceinte "respire" au repos.
+    val glow by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "halo"
+    )
+
+    val ready = progress >= 1f
     val breathe = if (active && !reducedMotion) pulse else 0f
+    val halo = if (ready && !reducedMotion) glow else if (ready) 1f else 0f
 
     val sweep by animateFloatAsState(
         targetValue = progress,
@@ -82,6 +95,15 @@ fun DriverButton(
         )
         drawCircle(color = Party.Edge, radius = r * 0.62f, center = c, style = Stroke(width = 3f))
 
+        // Halo de veille active : signale que la paire stereo tient
+        if (halo > 0f) {
+            drawCircle(
+                color = Party.Orange.copy(alpha = 0.05f + halo * 0.10f),
+                radius = r * (0.93f + halo * 0.05f),
+                center = c
+            )
+        }
+
         // Anneau de progression
         if (sweep > 0f) {
             drawArc(
@@ -103,8 +125,8 @@ fun DriverButton(
 
         // Dome central : le seul element qui s'allume
         drawCircle(
-            color = if (active || sweep >= 1f) Party.Orange else Party.Edge,
-            radius = r * (0.26f + breathe * 0.02f),
+            color = if (active || ready) Party.Orange else Party.Edge,
+            radius = r * (0.26f + breathe * 0.02f + halo * 0.03f),
             center = c
         )
     }

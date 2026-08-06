@@ -1,8 +1,16 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.TimeZone
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+val buildDate: String = SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'").apply {
+    timeZone = TimeZone.getTimeZone("UTC")
+}.format(Date())
 
 android {
     namespace = "fr.boitedefete"
@@ -12,13 +20,31 @@ android {
         applicationId = "fr.boitedefete"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
+
+        buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
+    }
+
+    // Cle de signature fixe et versionnee : sans elle, chaque compilation produit
+    // une signature differente et Android refuse d'installer la mise a jour
+    // par-dessus la precedente. C'est une cle de debogage, sans valeur secrete.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "partypair"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -34,6 +60,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

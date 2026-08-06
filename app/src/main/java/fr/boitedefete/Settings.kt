@@ -8,6 +8,9 @@ import android.provider.Settings as AndroidSettings
 /** Une enceinte telle que l'utilisateur l'a designee. */
 data class Speaker(val name: String, val mac: String)
 
+/** Une application musicale installee sur le telephone. */
+data class MusicApp(val name: String, val packageName: String)
+
 /**
  * Reglages propres a l'installation, saisis au premier lancement.
  *
@@ -32,6 +35,11 @@ class Settings(context: Context) {
     var phoneMac: String
         get() = prefs.getString(KEY_PHONE_MAC, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_PHONE_MAC, value.uppercase()).apply()
+
+    /** Application musicale ouverte depuis l'ecran principal. */
+    var musicApp: String?
+        get() = prefs.getString(KEY_MUSIC_APP, null)
+        set(value) = prefs.edit().putString(KEY_MUSIC_APP, value).apply()
 
     val isConfigured: Boolean
         get() = primary != null && secondary != null
@@ -61,6 +69,25 @@ class Settings(context: Context) {
         private const val KEY_SECONDARY_MAC = "secondary_mac"
         private const val KEY_SECONDARY_NAME = "secondary_name"
         private const val KEY_PHONE_MAC = "phone_mac"
+        private const val KEY_MUSIC_APP = "music_app"
+
+        /** Applications musicales installees, pour le bouton de lecture. */
+        fun musicApps(context: Context): List<MusicApp> {
+            val pm = context.packageManager
+            val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_APP_MUSIC)
+            return runCatching {
+                pm.queryIntentActivities(intent, 0)
+                    .map {
+                        MusicApp(
+                            it.loadLabel(pm).toString(),
+                            it.activityInfo.packageName
+                        )
+                    }
+                    .distinctBy { it.packageName }
+                    .sortedBy { it.name.lowercase() }
+            }.getOrDefault(emptyList())
+        }
 
         /** Enceintes deja appairees, proposees au choix lors de la configuration. */
         @SuppressLint("MissingPermission")

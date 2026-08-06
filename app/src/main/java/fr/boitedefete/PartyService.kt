@@ -32,20 +32,23 @@ class PartyService : Service() {
 
         if (job?.isActive == true) return START_NOT_STICKY
 
-        val unlink = intent?.action == ACTION_UNLINK
+        val action = intent?.action ?: ACTION_START
 
         job = scope.launch(Dispatchers.IO) {
             val controller = PartyController(applicationContext)
+            val report: (Step) -> Unit = { step ->
+                state.value = UiState(step)
+                notify(getString(step.label))
+            }
             try {
-                if (unlink) {
-                    state.value = UiState(Step.LINKING)
-                    controller.unlink()
-                    state.value = UiState(Step.IDLE)
-                } else {
-                    controller.run { step ->
-                        state.value = UiState(step)
-                        notify(getString(step.label))
+                when (action) {
+                    ACTION_POWER_OFF -> controller.powerOff(report)
+                    ACTION_UNLINK -> {
+                        report(Step.LINKING)
+                        controller.unlink()
+                        report(Step.IDLE)
                     }
+                    else -> controller.run(report)
                 }
             } catch (e: Exception) {
                 state.value = UiState(Step.FAILED, e.message ?: getString(R.string.error_unknown))
@@ -91,6 +94,7 @@ class PartyService : Service() {
     companion object {
         const val ACTION_START = "fr.boitedefete.action.START"
         const val ACTION_UNLINK = "fr.boitedefete.action.UNLINK"
+        const val ACTION_POWER_OFF = "fr.boitedefete.action.POWER_OFF"
 
         private const val CHANNEL_ID = "party"
         private const val NOTIFICATION_ID = 1

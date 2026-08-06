@@ -27,15 +27,24 @@ object Party {
 val Silkscreen = TextStyle(
     fontFamily = FontFamily.SansSerif,
     fontWeight = FontWeight.Medium,
-    fontSize = 12.sp,
-    letterSpacing = 3.sp
+    fontSize = 15.sp,
+    letterSpacing = 2.5.sp,
+    lineHeight = 22.sp
+)
+
+/** Variante courante pour les textes explicatifs, sans espacement force. */
+val Body = TextStyle(
+    fontFamily = FontFamily.SansSerif,
+    fontWeight = FontWeight.Normal,
+    fontSize = 15.sp,
+    lineHeight = 22.sp
 )
 
 val Display = TextStyle(
     fontFamily = FontFamily.SansSerif,
     fontWeight = FontWeight.Black,
-    fontSize = 28.sp,
-    letterSpacing = 6.sp
+    fontSize = 30.sp,
+    letterSpacing = 5.sp
 )
 
 @Composable

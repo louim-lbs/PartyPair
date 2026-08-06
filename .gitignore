@@ -10,7 +10,7 @@
 .cxx
 local.properties
 *.apk
-*.keystore
+# debug.keystore est volontairement versionne (voir app/build.gradle.kts)
 
 # Reglages personnels : ne jamais publier
 MES-REGLAGES.md

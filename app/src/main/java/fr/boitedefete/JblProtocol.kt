@@ -23,6 +23,7 @@ object JblProtocol {
     private const val IDENTIFIER = 0xAA.toByte()
 
     private const val CMD_DEVICE_ACTION = 0x03.toByte()
+    private const val CMD_REQ_DEV_INFO = 0x11.toByte()
     private const val CMD_SET_DEV_INFO = 0x13.toByte()
     private const val CMD_SET_PHONE_MAC = 0x84.toByte()
 
@@ -34,8 +35,14 @@ object JblProtocol {
     private fun frame(command: Byte, payload: ByteArray): ByteArray =
         byteArrayOf(IDENTIFIER, command, payload.size.toByte()) + payload
 
+    /** Interroge l'enceinte. Sert de sonde : une reponse signifie qu'elle est prete. */
+    val REQ_DEVICE_INFO: ByteArray = frame(CMD_REQ_DEV_INFO, byteArrayOf())
+
     /** Allume l'enceinte. En pratique la connexion BLE suffit deja a la reveiller. */
     val POWER_ON: ByteArray = frame(CMD_DEVICE_ACTION, byteArrayOf(0x05))
+
+    /** Remet l'enceinte en veille. */
+    val POWER_OFF: ByteArray = frame(CMD_DEVICE_ACTION, byteArrayOf(0x04))
 
     /** Demande l'etablissement de la liaison stereo. A envoyer aux deux enceintes. */
     val TWS_LINK: ByteArray = frame(
