@@ -2,6 +2,7 @@ package fr.boitedefete
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
@@ -86,7 +87,7 @@ class SpeakerLink private constructor(
                 }
 
                 gattRef = device.connectGatt(
-                    context, false, callback, BluetoothDeviceTransport.LE
+                    context, false, callback, BluetoothDevice.TRANSPORT_LE
                 )
 
                 cont.invokeOnCancellation {
@@ -95,11 +96,6 @@ class SpeakerLink private constructor(
                 }
             }
     }
-}
-
-/** BluetoothDevice.TRANSPORT_LE, isole pour rester lisible. */
-private object BluetoothDeviceTransport {
-    const val LE = 2
 }
 
 class SpeakerException(message: String) : Exception(message)

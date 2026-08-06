@@ -12,9 +12,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
@@ -22,8 +24,8 @@ import androidx.compose.ui.unit.dp
 /**
  * L'element signature : un cone de haut-parleur.
  *
- * Au repos il est eteint. Pendant la sequence il respire, comme une membrane.
- * L'anneau exterieur se remplit d'orange au fur et a mesure des etapes.
+ * Au repos il est eteint. Pendant la sequence la membrane respire.
+ * L'anneau exterieur se remplit d'orange au fil des etapes.
  */
 @Composable
 fun DriverButton(
@@ -33,19 +35,19 @@ fun DriverButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val breathe by if (active && !reducedMotion) {
-        rememberInfiniteTransition(label = "membrane").animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1400, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "excursion"
-        )
-    } else {
-        animateFloatAsState(targetValue = 0f, label = "excursion")
-    }
+    // L'animation tourne en permanence : la rendre conditionnelle romprait
+    // les regles de composition. On annule seulement son amplitude au repos.
+    val transition = rememberInfiniteTransition(label = "membrane")
+    val pulse by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "excursion"
+    )
+    val breathe = if (active && !reducedMotion) pulse else 0f
 
     val sweep by animateFloatAsState(
         targetValue = progress,
@@ -67,25 +69,20 @@ fun DriverButton(
         val r = size.minDimension / 2f
         val c = center
 
-        // Saladier : disque sombre et lisere metallique
+        // Saladier
         drawCircle(color = Party.Grille, radius = r, center = c)
         drawCircle(color = Party.Edge, radius = r, center = c, style = Stroke(width = 2f))
 
-        // Suspension : deux anneaux concentriques
+        // Suspension
         drawCircle(
             color = Party.Edge,
             radius = r * (0.80f + breathe * 0.015f),
             center = c,
             style = Stroke(width = 10f)
         )
-        drawCircle(
-            color = Party.Edge,
-            radius = r * 0.62f,
-            center = c,
-            style = Stroke(width = 3f)
-        )
+        drawCircle(color = Party.Edge, radius = r * 0.62f, center = c, style = Stroke(width = 3f))
 
-        // Anneau de progression : la sequence se lit sur la circonference
+        // Anneau de progression
         if (sweep > 0f) {
             drawArc(
                 brush = Brush.sweepGradient(
@@ -96,17 +93,13 @@ fun DriverButton(
                 sweepAngle = 360f * sweep,
                 useCenter = false,
                 topLeft = Offset(c.x - r * 0.92f, c.y - r * 0.92f),
-                size = androidx.compose.ui.geometry.Size(r * 1.84f, r * 1.84f),
+                size = Size(r * 1.84f, r * 1.84f),
                 style = Stroke(width = 6f)
             )
         }
 
         // Membrane
-        drawCircle(
-            color = Party.Cabinet,
-            radius = r * (0.60f - breathe * 0.01f),
-            center = c
-        )
+        drawCircle(color = Party.Cabinet, radius = r * (0.60f - breathe * 0.01f), center = c)
 
         // Dome central : le seul element qui s'allume
         drawCircle(

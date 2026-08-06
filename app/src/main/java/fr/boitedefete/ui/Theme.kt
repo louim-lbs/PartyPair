@@ -1,6 +1,5 @@
 package fr.boitedefete.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -41,7 +40,6 @@ val Display = TextStyle(
 
 @Composable
 fun BoiteDeFeteTheme(content: @Composable () -> Unit) {
-    @Suppress("UNUSED_EXPRESSION") isSystemInDarkTheme()
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Party.Orange,

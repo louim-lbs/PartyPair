@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -77,7 +78,7 @@ class MainActivity : ComponentActivity() {
 
                         else -> PartyScreen(
                             settings = settings,
-                            onStart = { PartyService.start(this) },
+                            onStart = { PartyService.start(this@MainActivity) },
                             onReconfigure = { settings.clear(); configured = false }
                         )
                     }
@@ -115,7 +116,7 @@ private fun PermissionScreen(onRetry: () -> Unit) {
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(24.dp))
-        androidx.compose.material3.TextButton(onClick = onRetry) {
+        TextButton(onClick = onRetry) {
             Text(
                 stringResource(R.string.permission_allow).uppercase(),
                 style = Silkscreen,

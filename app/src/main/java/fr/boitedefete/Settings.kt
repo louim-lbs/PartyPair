@@ -44,14 +44,15 @@ class Settings(context: Context) {
     }
 
     private fun write(macKey: String, nameKey: String, speaker: Speaker?) {
-        prefs.edit().apply {
-            if (speaker == null) {
-                remove(macKey); remove(nameKey)
-            } else {
-                putString(macKey, speaker.mac.uppercase())
-                putString(nameKey, speaker.name)
-            }
-        }.apply()
+        val editor = prefs.edit()
+        if (speaker == null) {
+            editor.remove(macKey)
+            editor.remove(nameKey)
+        } else {
+            editor.putString(macKey, speaker.mac.uppercase())
+            editor.putString(nameKey, speaker.name)
+        }
+        editor.apply()
     }
 
     companion object {
