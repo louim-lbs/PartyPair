@@ -25,10 +25,16 @@
     <!-- Configuration -->
     <string name="setup_title">Setup</string>
     <string name="setup_primary_question">Which speaker plays the sound?</string>
-    <string name="setup_primary_hint">The one your phone connects to.</string>
+    <string name="setup_primary_hint">The one your phone connects to. It must be paired to carry the audio.</string>
     <string name="setup_secondary_question">Which one joins it?</string>
-    <string name="setup_secondary_hint">The one completing the stereo pair.</string>
-    <string name="setup_no_devices">No paired Bluetooth device. Pair your speakers in the Bluetooth settings first.</string>
+    <string name="setup_secondary_hint">No need to pair this one: the stereo link only uses low energy Bluetooth. Leaving it unpaired keeps it from taking up a connection for nothing.</string>
+    <string name="setup_no_devices">Nothing found yet. Make sure the speaker is powered and within range, then search again.</string>
+    <string name="section_paired">Paired</string>
+    <string name="section_nearby">Found nearby</string>
+    <string name="scan_start">Search</string>
+    <string name="scan_stop">Stop</string>
+    <string name="scan_running">Looking for speakers…</string>
+    <string name="scan_all">Show every Bluetooth device</string>
     <string name="setup_phone_mac">Phone Bluetooth address</string>
     <string name="setup_phone_mac_detected">Detected automatically. Correct it if needed.</string>
     <string name="setup_phone_mac_manual">Settings → About phone → Status → Bluetooth address.\nLeave empty to skip sending it.</string>

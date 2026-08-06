@@ -47,9 +47,9 @@ class MainActivity : ComponentActivity() {
 
     private var permissionGranted by mutableStateOf(false)
 
-    private val requestPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> permissionGranted = granted }
+    private val requestPermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionGranted = hasPermission() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,19 +87,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun hasPermission(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            ContextCompat.checkSelfPermission(
-                this, Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
-
-    private fun askPermission() {
+    /**
+     * Depuis Android 12, parler aux enceintes et les chercher sont deux
+     * permissions distinctes. Avant, la recherche BLE passait par la position.
+     */
+    private fun neededPermissions(): Array<String> =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            requestPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            arrayOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN)
         } else {
-            permissionGranted = true
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
+
+    private fun hasPermission(): Boolean = neededPermissions().all {
+        ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
     }
+
+    private fun askPermission() = requestPermissions.launch(neededPermissions())
 }
 
 @Composable

@@ -17,26 +17,33 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.boitedefete.R
+import fr.boitedefete.ScannedSpeaker
 import fr.boitedefete.Speaker
+import fr.boitedefete.SpeakerScanner
 
 /**
  * Configuration au premier lancement.
  *
- * Les enceintes sont proposees depuis la liste des appareils deja appairés :
- * rien a recopier a la main. Seule l'adresse du telephone peut demander une
- * saisie, Android ne la laissant plus lire sur tous les appareils.
+ * L'enceinte principale est choisie parmi les appareils appairés : c'est elle
+ * qui transporte l'audio, l'appairage lui est nécessaire.
+ *
+ * L'enceinte secondaire est cherchée par un scan : elle n'a pas besoin d'être
+ * appairée, et mieux vaut ne pas le faire pour qu'elle n'occupe pas une
+ * connexion Bluetooth pour rien.
  */
 @Composable
 fun SetupScreen(
@@ -59,20 +66,22 @@ fun SetupScreen(
             style = Display.copy(fontSize = 20.sp),
             color = Party.Silkscreen
         )
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(24.dp))
 
         when {
-            primary == null -> Picker(
+            primary == null -> SpeakerStep(
                 question = stringResource(R.string.setup_primary_question),
                 hint = stringResource(R.string.setup_primary_hint),
-                devices = paired,
+                paired = paired,
+                exclude = null,
                 onPick = { primary = it }
             )
 
-            secondary == null -> Picker(
+            secondary == null -> SpeakerStep(
                 question = stringResource(R.string.setup_secondary_question),
                 hint = stringResource(R.string.setup_secondary_hint),
-                devices = paired.filter { it.mac != primary!!.mac },
+                paired = paired,
+                exclude = primary!!.mac,
                 onPick = { secondary = it }
             )
 
@@ -86,41 +95,150 @@ fun SetupScreen(
     }
 }
 
+/**
+ * Choix d'une enceinte : les appareils appairés d'abord, puis ceux repérés par
+ * un scan. La recherche s'arrête d'elle-même au bout de quelques secondes.
+ */
 @Composable
-private fun Picker(
+private fun SpeakerStep(
     question: String,
     hint: String,
-    devices: List<Speaker>,
+    paired: List<Speaker>,
+    exclude: String?,
     onPick: (Speaker) -> Unit
 ) {
+    val context = LocalContext.current
+    val scanner = remember { SpeakerScanner(context) }
+
+    var scanning by remember { mutableStateOf(false) }
+    var showEverything by remember { mutableStateOf(false) }
+    var found by remember { mutableStateOf<List<ScannedSpeaker>>(emptyList()) }
+
+    DisposableEffect(Unit) { onDispose { scanner.stop() } }
+
+    fun launchScan(everything: Boolean) {
+        scanning = true
+        showEverything = everything
+        scanner.start(
+            includeEverything = everything,
+            onUpdate = { found = it },
+            onFinished = { scanning = false }
+        )
+    }
+
     Text(question, style = Silkscreen.copy(letterSpacing = 1.sp), color = Party.Orange)
     Spacer(Modifier.height(6.dp))
     Text(hint, style = Silkscreen.copy(letterSpacing = 0.sp), color = Party.Muted)
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(18.dp))
 
-    if (devices.isEmpty()) {
+    TextButton(
+        onClick = { if (scanning) { scanner.stop(); scanning = false } else launchScan(false) },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            stringResource(if (scanning) R.string.scan_stop else R.string.scan_start).uppercase(),
+            style = Silkscreen,
+            color = Party.Orange
+        )
+    }
+
+    if (scanning) {
+        Text(
+            stringResource(R.string.scan_running),
+            style = Silkscreen.copy(letterSpacing = 0.sp, fontSize = 10.sp),
+            color = Party.Muted,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    val pairedShown = paired.filter { it.mac != exclude }
+    val foundShown = found.filter { it.mac != exclude && pairedShown.none { p -> p.mac == it.mac } }
+
+    if (pairedShown.isEmpty() && foundShown.isEmpty() && !scanning) {
         Text(
             stringResource(R.string.setup_no_devices),
             style = Silkscreen.copy(letterSpacing = 0.sp),
             color = Party.Silkscreen
         )
-        return
     }
 
     LazyColumn {
-        items(devices) { device ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onPick(device) }
-                    .padding(vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(device.name, style = Silkscreen.copy(letterSpacing = 1.sp), color = Party.Silkscreen)
-                Text(device.mac, style = Silkscreen.copy(letterSpacing = 0.sp, fontSize = 10.sp), color = Party.Muted)
+        if (pairedShown.isNotEmpty()) {
+            item { SectionLabel(stringResource(R.string.section_paired)) }
+            items(pairedShown) { device ->
+                DeviceRow(
+                    name = device.name,
+                    detail = device.mac,
+                    highlighted = false,
+                    onClick = { onPick(device) }
+                )
             }
         }
+
+        if (foundShown.isNotEmpty()) {
+            item { SectionLabel(stringResource(R.string.section_nearby)) }
+            items(foundShown) { device ->
+                DeviceRow(
+                    name = device.name,
+                    detail = "${device.mac}   ${device.rssi} dBm",
+                    highlighted = device.isPartyBox,
+                    onClick = { onPick(Speaker(device.name, device.mac)) }
+                )
+            }
+        }
+
+        if (!scanning && !showEverything && found.isEmpty()) {
+            item {
+                TextButton(
+                    onClick = { launchScan(true) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        stringResource(R.string.scan_all).uppercase(),
+                        style = Silkscreen.copy(fontSize = 10.sp),
+                        color = Party.Muted
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Spacer(Modifier.height(14.dp))
+    Text(text.uppercase(), style = Silkscreen.copy(fontSize = 9.sp), color = Party.Muted)
+    Spacer(Modifier.height(4.dp))
+}
+
+@Composable
+private fun DeviceRow(
+    name: String,
+    detail: String,
+    highlighted: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            name,
+            style = Silkscreen.copy(letterSpacing = 1.sp),
+            color = if (highlighted) Party.Orange else Party.Silkscreen
+        )
+        Text(
+            detail,
+            style = Silkscreen.copy(letterSpacing = 0.sp, fontSize = 10.sp),
+            color = Party.Muted
+        )
     }
 }
 

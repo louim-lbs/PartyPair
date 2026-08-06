@@ -21,10 +21,16 @@
 
     <string name="setup_title">Configuration</string>
     <string name="setup_primary_question">Quelle enceinte reçoit le son ?</string>
-    <string name="setup_primary_hint">Celle à laquelle le téléphone se connecte.</string>
+    <string name="setup_primary_hint">Celle à laquelle le téléphone se connecte. Elle doit être appairée pour transporter l\'audio.</string>
     <string name="setup_secondary_question">Quelle enceinte la rejoint ?</string>
-    <string name="setup_secondary_hint">Celle qui complète la paire stéréo.</string>
-    <string name="setup_no_devices">Aucun appareil Bluetooth appairé. Appairez d\'abord vos enceintes dans les réglages Bluetooth.</string>
+    <string name="setup_secondary_hint">Pas besoin de l\'appairer : la liaison stéréo passe uniquement par le Bluetooth basse consommation. La laisser non appairée évite qu\'elle occupe une connexion pour rien.</string>
+    <string name="setup_no_devices">Rien trouvé pour l\'instant. Vérifiez que l\'enceinte est allumée et à portée, puis relancez la recherche.</string>
+    <string name="section_paired">Appairées</string>
+    <string name="section_nearby">À proximité</string>
+    <string name="scan_start">Rechercher</string>
+    <string name="scan_stop">Arrêter</string>
+    <string name="scan_running">Recherche des enceintes…</string>
+    <string name="scan_all">Afficher tous les appareils Bluetooth</string>
     <string name="setup_phone_mac">Adresse Bluetooth du téléphone</string>
     <string name="setup_phone_mac_detected">Détectée automatiquement. Corrigez-la si besoin.</string>
     <string name="setup_phone_mac_manual">Réglages → À propos du téléphone → État → Adresse Bluetooth.\nLaissez vide pour ne pas l\'envoyer.</string>
