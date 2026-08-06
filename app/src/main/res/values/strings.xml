@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Langue par defaut : anglais. Voir values-fr pour le francais. -->
+<resources>
+    <string name="app_name">Party Pair</string>
+    <string name="channel_name">Powering on</string>
+    <string name="not_configured">Open the app to choose your speakers.</string>
+
+    <!-- Etapes de la sequence -->
+    <string name="step_idle">Asleep</string>
+    <string name="step_waking_secondary">Waking the second speaker</string>
+    <string name="step_waking_primary">Waking the main speaker</string>
+    <string name="step_linking">Stereo link</string>
+    <string name="step_ready">Ready</string>
+    <string name="step_failed">Failed</string>
+
+    <!-- Ecran principal -->
+    <string name="channel_left">L</string>
+    <string name="channel_right">R</string>
+    <string name="reconfigure_hint">Long press to reconfigure</string>
+
+    <!-- Permission -->
+    <string name="permission_rationale">Bluetooth access is needed to talk to the speakers.</string>
+    <string name="permission_allow">Allow</string>
+
+    <!-- Configuration -->
+    <string name="setup_title">Setup</string>
+    <string name="setup_primary_question">Which speaker plays the sound?</string>
+    <string name="setup_primary_hint">The one your phone connects to.</string>
+    <string name="setup_secondary_question">Which one joins it?</string>
+    <string name="setup_secondary_hint">The one completing the stereo pair.</string>
+    <string name="setup_no_devices">No paired Bluetooth device. Pair your speakers in the Bluetooth settings first.</string>
+    <string name="setup_phone_mac">Phone Bluetooth address</string>
+    <string name="setup_phone_mac_detected">Detected automatically. Correct it if needed.</string>
+    <string name="setup_phone_mac_manual">Settings → About phone → Status → Bluetooth address.\nLeave empty to skip sending it.</string>
+    <string name="setup_phone_mac_placeholder">AA:BB:CC:DD:EE:FF</string>
+    <string name="setup_finish">Finish</string>
+
+    <!-- Erreurs -->
+    <string name="error_not_configured">Speakers not set up</string>
+    <string name="error_no_bluetooth">Bluetooth unavailable on this device</string>
+    <string name="error_bluetooth_off">Turn Bluetooth on to continue</string>
+    <string name="error_connection_lost">Lost connection with %1$s</string>
+    <string name="error_no_service">%1$s does not expose the expected service</string>
+    <string name="error_unknown">Unknown error</string>
+</resources>

@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.apk
+*.keystore
+
+# Reglages personnels : ne jamais publier
+MES-REGLAGES.md
+*.local.md

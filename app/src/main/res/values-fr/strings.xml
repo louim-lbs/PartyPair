@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Francais : France, Suisse, Belgique, Canada. -->
+<resources>
+    <string name="app_name">Boîte de Fête</string>
+    <string name="channel_name">Mise en marche</string>
+    <string name="not_configured">Ouvrez l\'application pour choisir vos enceintes.</string>
+
+    <string name="step_idle">En veille</string>
+    <string name="step_waking_secondary">Réveil de la seconde enceinte</string>
+    <string name="step_waking_primary">Réveil de l\'enceinte principale</string>
+    <string name="step_linking">Liaison stéréo</string>
+    <string name="step_ready">Prêt</string>
+    <string name="step_failed">Échec</string>
+
+    <string name="channel_left">G</string>
+    <string name="channel_right">D</string>
+    <string name="reconfigure_hint">Appui long pour reconfigurer</string>
+
+    <string name="permission_rationale">L\'accès Bluetooth est nécessaire pour parler aux enceintes.</string>
+    <string name="permission_allow">Autoriser</string>
+
+    <string name="setup_title">Configuration</string>
+    <string name="setup_primary_question">Quelle enceinte reçoit le son ?</string>
+    <string name="setup_primary_hint">Celle à laquelle le téléphone se connecte.</string>
+    <string name="setup_secondary_question">Quelle enceinte la rejoint ?</string>
+    <string name="setup_secondary_hint">Celle qui complète la paire stéréo.</string>
+    <string name="setup_no_devices">Aucun appareil Bluetooth appairé. Appairez d\'abord vos enceintes dans les réglages Bluetooth.</string>
+    <string name="setup_phone_mac">Adresse Bluetooth du téléphone</string>
+    <string name="setup_phone_mac_detected">Détectée automatiquement. Corrigez-la si besoin.</string>
+    <string name="setup_phone_mac_manual">Réglages → À propos du téléphone → État → Adresse Bluetooth.\nLaissez vide pour ne pas l\'envoyer.</string>
+    <string name="setup_phone_mac_placeholder">AA:BB:CC:DD:EE:FF</string>
+    <string name="setup_finish">Terminer</string>
+
+    <string name="error_not_configured">Enceintes non configurées</string>
+    <string name="error_no_bluetooth">Bluetooth indisponible sur cet appareil</string>
+    <string name="error_bluetooth_off">Activez le Bluetooth pour continuer</string>
+    <string name="error_connection_lost">Connexion perdue avec %1$s</string>
+    <string name="error_no_service">%1$s ne présente pas le service attendu</string>
+    <string name="error_unknown">Erreur inconnue</string>
+</resources>
