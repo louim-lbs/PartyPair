@@ -34,17 +34,51 @@ class Settings(context: Context) {
     /** Adresse Bluetooth du telephone, transmise a l'enceinte principale. */
     var phoneMac: String
         get() = prefs.getString(KEY_PHONE_MAC, "").orEmpty()
-        set(value) = prefs.edit().putString(KEY_PHONE_MAC, value.uppercase()).apply()
+        // commit() plutot que apply() : la configuration ne doit pas se perdre
+        // si le systeme arrete le processus juste apres la saisie.
+        set(value) {
+            prefs.edit().putString(KEY_PHONE_MAC, MacFormat.normalize(value)).commit()
+        }
 
     /** Application musicale ouverte depuis l'ecran principal. */
     var musicApp: String?
         get() = prefs.getString(KEY_MUSIC_APP, null)
-        set(value) = prefs.edit().putString(KEY_MUSIC_APP, value).apply()
+        set(value) {
+            prefs.edit().putString(KEY_MUSIC_APP, value).commit()
+        }
+
+    /** Adresse de la playlist ouverte avec l'application musicale. Facultative. */
+    var musicUrl: String
+        get() = prefs.getString(KEY_MUSIC_URL, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_MUSIC_URL, value.trim()).apply()
+
+    /** Volume applique au reveil, de 0 a 32. Negatif signifie « ne pas toucher ». */
+    var wakeVolume: Int
+        get() = prefs.getInt(KEY_WAKE_VOLUME, DEFAULT_WAKE_VOLUME)
+        set(value) = prefs.edit().putInt(KEY_WAKE_VOLUME, value).apply()
+
+    /** Volume releve avant la mise en veille, restitue au reveil suivant. */
+    var lastVolume: Int
+        get() = prefs.getInt(KEY_LAST_VOLUME, -1)
+        set(value) = prefs.edit().putInt(KEY_LAST_VOLUME, value).apply()
+
+    /** Declenchement automatique avant l'alarme du telephone. */
+    var alarmEnabled: Boolean
+        get() = prefs.getBoolean(KEY_ALARM_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_ALARM_ENABLED, value).apply()
+
+    /** Avance, en minutes, sur l'alarme du telephone. */
+    var alarmLeadMinutes: Int
+        get() = prefs.getInt(KEY_ALARM_LEAD, 1)
+        set(value) = prefs.edit().putInt(KEY_ALARM_LEAD, value.coerceIn(0, 30)).apply()
 
     val isConfigured: Boolean
         get() = primary != null && secondary != null
 
-    fun clear() = prefs.edit().clear().apply()
+    /** Efface toute la configuration. Reserve a une action explicite. */
+    fun clear() {
+        prefs.edit().clear().commit()
+    }
 
     private fun read(macKey: String, nameKey: String): Speaker? {
         val mac = prefs.getString(macKey, null) ?: return null
@@ -60,7 +94,9 @@ class Settings(context: Context) {
             editor.putString(macKey, speaker.mac.uppercase())
             editor.putString(nameKey, speaker.name)
         }
-        editor.apply()
+        // Ecriture synchrone : perdre l'identite des enceintes obligerait a tout
+        // reconfigurer, ce qui est bien plus penalisant qu'une milliseconde d'attente.
+        editor.commit()
     }
 
     companion object {
@@ -70,6 +106,14 @@ class Settings(context: Context) {
         private const val KEY_SECONDARY_NAME = "secondary_name"
         private const val KEY_PHONE_MAC = "phone_mac"
         private const val KEY_MUSIC_APP = "music_app"
+        private const val KEY_MUSIC_URL = "music_url"
+        private const val KEY_WAKE_VOLUME = "wake_volume"
+        private const val KEY_LAST_VOLUME = "last_volume"
+        private const val KEY_ALARM_ENABLED = "alarm_enabled"
+        private const val KEY_ALARM_LEAD = "alarm_lead"
+
+        /** Un tiers du maximum : audible sans faire sursauter. */
+        const val DEFAULT_WAKE_VOLUME = 10
 
         /** Applications musicales installees, pour le bouton de lecture. */
         fun musicApps(context: Context): List<MusicApp> {

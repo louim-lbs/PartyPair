@@ -42,6 +42,14 @@ class PartyService : Service() {
             }
             try {
                 when (action) {
+                    ACTION_WAKE -> {
+                        // Declenche par l'alarme : aucune fenetre ne peut s'ouvrir,
+                        // on lance donc la musique directement.
+                        controller.run(report)
+                        MusicLauncher.open(applicationContext, Settings(applicationContext))
+                        kotlinx.coroutines.delay(3_000)
+                        MusicLauncher.play(applicationContext)
+                    }
                     ACTION_POWER_OFF -> controller.powerOff(report)
                     ACTION_UNLINK -> {
                         report(Step.LINKING)
@@ -95,12 +103,27 @@ class PartyService : Service() {
         const val ACTION_START = "fr.boitedefete.action.START"
         const val ACTION_UNLINK = "fr.boitedefete.action.UNLINK"
         const val ACTION_POWER_OFF = "fr.boitedefete.action.POWER_OFF"
+        const val ACTION_WAKE = "fr.boitedefete.action.WAKE"
 
         private const val CHANNEL_ID = "party"
         private const val NOTIFICATION_ID = 1
 
         /** Etat partage avec l'interface. */
         val state = MutableStateFlow(UiState(Step.IDLE))
+
+        /**
+         * Remet l'affichage en phase avec la realite.
+         *
+         * L'etat vit en memoire : si Android arrete le processus, l'application
+         * rouvre en croyant les enceintes eteintes alors qu'elles jouent encore.
+         */
+        suspend fun refreshState(context: Context) {
+            if (state.value.step != Step.IDLE) return
+            val on = runCatching { PartyController(context).isAlreadyOn() }.getOrDefault(false)
+            if (on && state.value.step == Step.IDLE) {
+                state.value = UiState(Step.READY)
+            }
+        }
 
         fun start(context: Context, action: String = ACTION_START) {
             val intent = Intent(context, PartyService::class.java).setAction(action)

@@ -7,7 +7,11 @@ import android.bluetooth.BluetoothProfile
 import android.content.Context
 import androidx.annotation.StringRes
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.max
 
 /** Etapes de la sequence. Le libelle suit la langue du telephone. */
 enum class Step(@StringRes val label: Int) {
@@ -15,8 +19,9 @@ enum class Step(@StringRes val label: Int) {
     WAKING_SECONDARY(R.string.step_waking_secondary),
     WAKING_PRIMARY(R.string.step_waking_primary),
     LINKING(R.string.step_linking),
-    POWERING_OFF(R.string.step_powering_off),
     CONNECTING_AUDIO(R.string.step_connecting_audio),
+    FADING_OUT(R.string.step_fading_out),
+    POWERING_OFF(R.string.step_powering_off),
     READY(R.string.step_ready),
     FAILED(R.string.step_failed)
 }
@@ -34,26 +39,20 @@ class PartyController(private val context: Context) {
     private val settings = Settings(context)
 
     suspend fun run(onStep: (Step) -> Unit) {
-        val primaryMac = settings.primary?.mac
+        val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
-        val secondaryMac = settings.secondary?.mac
+        val secondaryDevice = settings.secondary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val adapter = adapter()
 
         onStep(Step.WAKING_SECONDARY)
-        val secondary = withTimeout(Config.CONNECT_TIMEOUT_MS) {
-            SpeakerLink.open(context, adapter, secondaryMac)
-        }
+        val secondary = connect(adapter, secondaryDevice)
 
         try {
-            // Attendre que l'enceinte reponde vraiment : sinon la commande de
-            // liaison arrive avant qu'elle ne soit capable de la traiter.
             secondary.awaitReady(Config.READY_TIMEOUT_MS)
 
             onStep(Step.WAKING_PRIMARY)
-            val primary = withTimeout(Config.CONNECT_TIMEOUT_MS) {
-                SpeakerLink.open(context, adapter, primaryMac)
-            }
+            val primary = connect(adapter, primaryDevice)
 
             try {
                 primary.awaitReady(Config.READY_TIMEOUT_MS)
@@ -64,20 +63,20 @@ class PartyController(private val context: Context) {
                     delay(300)
                 }
 
-                onStep(Step.LINKING)
-                // L'application JBL ecrit d'abord sur la secondaire, puis sur la
-                // principale environ 250 ms plus tard.
-                secondary.write(JblProtocol.TWS_LINK)
-                delay(Config.INTER_WRITE_DELAY_MS)
-                primary.write(JblProtocol.TWS_LINK)
-                delay(Config.LINK_SETTLE_MS)
+                // Inutile de refaire la paire si elle tient deja.
+                if (!primary.isStereoLinked()) {
+                    onStep(Step.LINKING)
+                    secondary.write(JblProtocol.TWS_LINK)
+                    delay(Config.INTER_WRITE_DELAY_MS)
+                    primary.write(JblProtocol.TWS_LINK)
+                    delay(Config.LINK_SETTLE_MS)
+                }
+
+                applyVolume(primary)
 
                 if (phoneMac.isNotBlank()) {
                     onStep(Step.CONNECTING_AUDIO)
-                    awaitAudio(adapter, primaryMac) {
-                        // Relancer l'invitation si l'enceinte n'est pas venue.
-                        primary.write(JblProtocol.connectTo(phoneMac))
-                    }
+                    awaitAudio(adapter) { primary.write(JblProtocol.connectTo(phoneMac)) }
                 }
 
                 onStep(Step.READY)
@@ -90,70 +89,118 @@ class PartyController(private val context: Context) {
     }
 
     /**
-     * Attend que l'enceinte principale rejoigne le telephone en audio,
-     * en relancant l'invitation a mi-parcours si rien ne vient.
-     */
-    private suspend fun awaitAudio(
-        adapter: BluetoothAdapter,
-        mac: String,
-        retry: () -> Unit
-    ) {
-        val deadline = System.currentTimeMillis() + Config.AUDIO_TIMEOUT_MS
-        var retried = false
-        while (System.currentTimeMillis() < deadline) {
-            if (adapter.getProfileConnectionState(BluetoothProfile.A2DP) ==
-                BluetoothProfile.STATE_CONNECTED
-            ) return
-            if (!retried && System.currentTimeMillis() > deadline - Config.AUDIO_TIMEOUT_MS / 2) {
-                retried = true
-                retry()
-            }
-            delay(800)
-        }
-    }
-
-    /**
-     * Remet les deux enceintes en veille.
+     * Remet les deux enceintes en veille, apres un fondu sonore.
      *
-     * La commande d'extinction coupe l'amplificateur ; le controleur BLE reste
-     * alimente, ce qui permettra de les reveiller par une simple connexion.
+     * Couper net une enceinte qui joue fort est desagreable ; on abaisse donc le
+     * volume par paliers avant d'eteindre, en memorisant le niveau de depart pour
+     * le retrouver au reveil suivant.
      */
     suspend fun powerOff(onStep: (Step) -> Unit) {
-        val adapter = adapter()
-        val macs = listOfNotNull(settings.secondary?.mac, settings.primary?.mac)
-        if (macs.isEmpty()) {
+        val primaryDevice = settings.primary
+        val secondaryDevice = settings.secondary
+        if (primaryDevice == null || secondaryDevice == null) {
             throw SpeakerException(context.getString(R.string.error_not_configured))
+        }
+        val adapter = adapter()
+
+        onStep(Step.FADING_OUT)
+        runCatching {
+            val primary = connect(adapter, primaryDevice)
+            try {
+                primary.awaitReady(Config.READY_TIMEOUT_MS)
+                fadeOut(primary)
+                primary.write(JblProtocol.POWER_OFF)
+            } finally {
+                primary.close()
+            }
         }
 
         onStep(Step.POWERING_OFF)
-        macs.forEach { mac ->
-            runCatching {
-                val link = withTimeout(Config.CONNECT_TIMEOUT_MS) {
-                    SpeakerLink.open(context, adapter, mac)
-                }
-                try {
-                    link.write(JblProtocol.POWER_OFF)
-                    delay(Config.INTER_WRITE_DELAY_MS)
-                } finally {
-                    link.close()
-                }
+        runCatching {
+            val secondary = connect(adapter, secondaryDevice)
+            try {
+                secondary.write(JblProtocol.POWER_OFF)
+                delay(Config.INTER_WRITE_DELAY_MS)
+            } finally {
+                secondary.close()
             }
         }
+
         onStep(Step.IDLE)
     }
 
-    /** Rompt la paire stereo. */
+    /** Abaisse progressivement le volume jusqu'au silence. */
+    private suspend fun fadeOut(primary: SpeakerLink) {
+        val start = primary.readVolume() ?: return
+        if (start <= 0) return
+        settings.lastVolume = start
+
+        val stepSize = max(1, start / Config.FADE_STEPS)
+        var level = start
+        while (level > 0) {
+            level = (level - stepSize).coerceAtLeast(0)
+            primary.write(JblProtocol.setVolume(level))
+            delay(Config.FADE_STEP_MS)
+        }
+    }
+
+    /** Applique le volume de reveil, ou restitue celui d'avant la mise en veille. */
+    private suspend fun applyVolume(primary: SpeakerLink) {
+        val wanted = when {
+            settings.wakeVolume >= 0 -> settings.wakeVolume
+            settings.lastVolume >= 0 -> settings.lastVolume
+            else -> return
+        }
+        primary.write(JblProtocol.setVolume(wanted))
+        delay(200)
+    }
+
+    /**
+     * Verifie si les enceintes sont deja en service, sans les reveiller.
+     *
+     * Ouvrir une connexion BLE sortirait une enceinte de veille : on interroge
+     * donc Android sur ses connexions audio, ce qui n'emet rien vers l'enceinte.
+     * Si la principale est connectee, elle est allumee et la paire stereo, qui
+     * survit a l'extinction du telephone, est presque toujours encore la.
+     */
+    suspend fun isAlreadyOn(): Boolean {
+        val primaryMac = settings.primary?.mac ?: return false
+        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val adapter = manager?.adapter?.takeIf { it.isEnabled } ?: return false
+
+        return withTimeoutOrNull(Config.PROBE_TIMEOUT_MS) {
+            suspendCancellableCoroutine { cont ->
+                val settled = AtomicBoolean(false)
+                val listener = object : BluetoothProfile.ServiceListener {
+                    override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+                        val connected = runCatching {
+                            proxy.connectedDevices.any { it.address.equals(primaryMac, true) }
+                        }.getOrDefault(false)
+                        runCatching { adapter.closeProfileProxy(profile, proxy) }
+                        if (settled.compareAndSet(false, true)) cont.resume(connected) { _, _, _ -> }
+                    }
+
+                    override fun onServiceDisconnected(profile: Int) {
+                        if (settled.compareAndSet(false, true)) cont.resume(false) { _, _, _ -> }
+                    }
+                }
+                val started = runCatching {
+                    adapter.getProfileProxy(context, listener, BluetoothProfile.A2DP)
+                }.getOrDefault(false)
+                if (!started && settled.compareAndSet(false, true)) cont.resume(false) { _, _, _ -> }
+            }
+        } ?: false
+    }
+
+    /** Rompt la paire stereo sans eteindre. */
     suspend fun unlink() {
         val adapter = adapter()
-        val macs = listOfNotNull(settings.secondary?.mac, settings.primary?.mac)
-        if (macs.isEmpty()) {
+        val devices = listOfNotNull(settings.secondary, settings.primary)
+        if (devices.isEmpty()) {
             throw SpeakerException(context.getString(R.string.error_not_configured))
         }
-
-        macs.forEach { mac ->
-            val link = withTimeout(Config.CONNECT_TIMEOUT_MS) {
-                SpeakerLink.open(context, adapter, mac)
-            }
+        devices.forEach { device ->
+            val link = connect(adapter, device)
             try {
                 link.awaitReady(Config.READY_TIMEOUT_MS)
                 link.write(JblProtocol.TWS_UNLINK)
@@ -161,6 +208,45 @@ class PartyController(private val context: Context) {
             } finally {
                 link.close()
             }
+        }
+    }
+
+    /**
+     * Ouvre une connexion, avec une seconde tentative.
+     *
+     * Une enceinte en veille profonde rate parfois la premiere sollicitation ;
+     * le message d'erreur nomme l'enceinte concernee plutot que son adresse.
+     */
+    private suspend fun connect(adapter: BluetoothAdapter, device: Speaker): SpeakerLink {
+        repeat(Config.CONNECT_ATTEMPTS) { attempt ->
+            val link = runCatching {
+                withTimeout(Config.CONNECT_TIMEOUT_MS) {
+                    SpeakerLink.open(context, adapter, device.mac)
+                }
+            }.getOrNull()
+            if (link != null) return link
+            if (attempt < Config.CONNECT_ATTEMPTS - 1) delay(1_500)
+        }
+        throw SpeakerException(context.getString(R.string.error_speaker_unreachable, device.name))
+    }
+
+    /**
+     * Attend que l'enceinte principale rejoigne le telephone en audio,
+     * en relancant l'invitation a mi-parcours si rien ne vient.
+     */
+    private suspend fun awaitAudio(adapter: BluetoothAdapter, retry: () -> Unit) {
+        val deadline = System.currentTimeMillis() + Config.AUDIO_TIMEOUT_MS
+        val halfway = System.currentTimeMillis() + Config.AUDIO_TIMEOUT_MS / 2
+        var retried = false
+        while (System.currentTimeMillis() < deadline) {
+            if (adapter.getProfileConnectionState(BluetoothProfile.A2DP) ==
+                BluetoothProfile.STATE_CONNECTED
+            ) return
+            if (!retried && System.currentTimeMillis() > halfway) {
+                retried = true
+                retry()
+            }
+            delay(800)
         }
     }
 

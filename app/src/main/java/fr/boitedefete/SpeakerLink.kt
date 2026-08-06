@@ -61,6 +61,36 @@ class SpeakerLink private constructor(
         true
     } ?: false
 
+    /**
+     * Envoie une requete et attend la reponse portant la commande voulue.
+     * Renvoie null si l'enceinte ne repond pas a temps.
+     */
+    suspend fun query(request: ByteArray, expected: Byte, timeoutMs: Long = 2_500L): ByteArray? =
+        withTimeoutOrNull(timeoutMs) {
+            var answer: ByteArray? = null
+            while (answer == null) {
+                write(request)
+                answer = withTimeoutOrNull(PROBE_INTERVAL_MS) {
+                    notifications.first { JblProtocol.commandOf(it) == expected }
+                }
+            }
+            answer
+        }
+
+    /** Volume courant, ou null si l'enceinte ne le communique pas. */
+    suspend fun readVolume(): Int? {
+        val answer = query(JblProtocol.REQ_PLAYER_INFO, JblProtocol.RESP_PLAYER_INFO) ?: return null
+        val raw = JblProtocol.parseFields(answer)[JblProtocol.TAG_VOLUME] ?: return null
+        return raw.firstOrNull()?.toInt()?.and(0xFF)
+    }
+
+    /** Vrai si la paire stereo est deja etablie. */
+    suspend fun isStereoLinked(): Boolean {
+        val answer = query(JblProtocol.REQ_DEVICE_INFO, JblProtocol.RESP_DEV_INFO) ?: return false
+        val raw = JblProtocol.parseFields(answer)[JblProtocol.TAG_PARTY_CONNECT] ?: return false
+        return raw.firstOrNull() == JblProtocol.PARTY_CONNECTED
+    }
+
     fun close() {
         runCatching { gatt.disconnect() }
         runCatching { gatt.close() }
@@ -68,7 +98,7 @@ class SpeakerLink private constructor(
 
     companion object {
 
-        private const val PROBE_INTERVAL_MS = 1_200L
+        internal const val PROBE_INTERVAL_MS = 1_200L
 
         /**
          * Ouvre une connexion et attend la decouverte des services.

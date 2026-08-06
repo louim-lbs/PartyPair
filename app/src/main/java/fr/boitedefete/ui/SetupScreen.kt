@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import fr.boitedefete.MacFormat
 import fr.boitedefete.R
 import fr.boitedefete.ScannedSpeaker
 import fr.boitedefete.Speaker
@@ -264,17 +265,33 @@ private fun PhoneMacStep(
     )
     Spacer(Modifier.height(20.dp))
 
+    // Les deux-points sont ajoutes au fil de la frappe, et un collage est
+    // accepte quelle que soit sa forme : minuscules, tirets, espaces.
     OutlinedTextField(
         value = value,
-        onValueChange = onChange,
+        onValueChange = { onChange(MacFormat.normalize(it)) },
         placeholder = { Text(stringResource(R.string.setup_phone_mac_placeholder), color = Party.Muted) },
         singleLine = true,
+        isError = value.isNotBlank() && !MacFormat.isComplete(value),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
         modifier = Modifier.fillMaxWidth()
     )
 
+    if (value.isNotBlank() && !MacFormat.isComplete(value)) {
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.mac_incomplete),
+            style = Body.copy(fontSize = 13.sp),
+            color = Party.Orange
+        )
+    }
+
     Spacer(Modifier.height(28.dp))
-    TextButton(onClick = onValidate, modifier = Modifier.fillMaxWidth()) {
+    TextButton(
+        onClick = onValidate,
+        enabled = value.isBlank() || MacFormat.isComplete(value),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Text(
             stringResource(R.string.setup_finish).uppercase(),
             style = Silkscreen,

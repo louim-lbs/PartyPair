@@ -12,7 +12,6 @@
     <string name="step_ready">Prêt</string>
     <string name="step_failed">Échec</string>
 
-    <string name="reconfigure_hint">Appui long pour reconfigurer</string>
 
     <string name="permission_rationale">L\'accès Bluetooth est nécessaire pour parler aux enceintes.</string>
     <string name="permission_allow">Autoriser</string>
@@ -44,13 +43,12 @@
     <string name="step_powering_off">Mise en veille</string>
     <string name="step_connecting_audio">Connexion audio</string>
     <string name="press_again_to_sleep">Appuyez à nouveau pour mettre les deux enceintes en veille</string>
-    <string name="open_music">Ouvrir la musique</string>
+    <string name="open_music">Musique !</string>
     <string name="pick_music_app">Choisir une application musicale</string>
     <string name="pick_music_hint">Elle apparaîtra en raccourci sur l\'écran principal une fois les enceintes prêtes.</string>
     <string name="pick_music_none">Aucune application musicale trouvée sur ce téléphone.</string>
     <string name="shortcut_start">Boîte de Fête — Démarrer</string>
     <string name="shortcut_standby">Boîte de Fête — Veille</string>
-    <string name="info_tagline">Réveille deux enceintes JBL PartyBox et les met en paire stéréo sans fil.</string>
     <string name="info_version">Version</string>
     <string name="info_build">Compilée le</string>
     <string name="info_license">Licence</string>
@@ -59,4 +57,26 @@
     <string name="info_license_link">Lire la licence</string>
     <string name="info_back">Retour</string>
     <string name="info_disclaimer">Projet indépendant, sans lien avec Harman ou JBL. Le protocole a été reconstitué à des fins d\'interopérabilité.</string>
+    <string name="step_fading_out">Fondu sonore</string>
+    <string name="settings_title">Réglages</string>
+    <string name="settings_glyph">\u2699</string>
+    <string name="section_devices">Appareils</string>
+    <string name="section_playback">Lecture</string>
+    <string name="section_alarm">Réveil</string>
+    <string name="section_about">À propos</string>
+    <string name="change_speakers">Changer d\'enceintes</string>
+    <string name="change_music_app">Changer d\'application musicale</string>
+    <string name="wake_volume">Volume au réveil : %1$d sur 32</string>
+    <string name="wake_volume_hint">Appliqué à chaque réveil des enceintes, pour qu\'une soirée forte ne devienne pas un matin brutal.</string>
+    <string name="playlist_url">Lien de la playlist</string>
+    <string name="playlist_hint">Collez un lien de partage pour l\'ouvrir directement. Laissez vide pour ouvrir simplement l\'application.</string>
+    <string name="alarm_follow">Réveiller les enceintes avec mon alarme</string>
+    <string name="alarm_hint">Utilise la prochaine alarme du téléphone, quelle que soit l\'application qui l\'a posée. Gardez votre alarme habituelle en secours : une enceinte hors de portée ne doit pas vous faire dormir trop longtemps.</string>
+    <string name="alarm_permission_needed">Android demande une autorisation pour les alarmes exactes. Réappuyez sur l\'interrupteur pour l\'accorder.</string>
+    <string name="countdown_title">Enceintes prêtes</string>
+    <string name="countdown_body">La musique démarre dans %1$d s.</string>
+    <string name="countdown_now">Maintenant</string>
+    <string name="countdown_stay">Rester ici</string>
+    <string name="error_speaker_unreachable">%1$s n\'a pas répondu. Vérifiez qu\'elle est branchée et à portée, et que l\'application JBL est fermée.</string>
+    <string name="mac_incomplete">Une adresse Bluetooth compte six paires, par exemple AA:BB:CC:DD:EE:FF.</string>
 </resources>

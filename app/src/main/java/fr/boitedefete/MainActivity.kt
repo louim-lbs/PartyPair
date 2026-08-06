@@ -6,13 +6,12 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings as AndroidSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,18 +39,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import fr.boitedefete.ui.BoiteDeFeteTheme
 import fr.boitedefete.ui.Body
+import fr.boitedefete.ui.CountdownDialog
 import fr.boitedefete.ui.Display
 import fr.boitedefete.ui.DriverButton
-import fr.boitedefete.ui.InfoScreen
 import fr.boitedefete.ui.MusicAppPicker
 import fr.boitedefete.ui.MusicButton
 import fr.boitedefete.ui.Party
 import fr.boitedefete.ui.SetupScreen
+import fr.boitedefete.ui.SettingsScreen
 import fr.boitedefete.ui.Silkscreen
 
-private enum class Screen { PARTY, SETUP, INFO, MUSIC_PICKER }
+/** Taille du titre, identique sur tous les ecrans. */
+private val TITLE_SIZE = 24.sp
+
+private enum class Screen { PARTY, SETUP, SETTINGS, MUSIC_PICKER }
 
 class MainActivity : ComponentActivity() {
 
@@ -58,7 +64,21 @@ class MainActivity : ComponentActivity() {
 
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissionGranted = hasPermission() }
+    ) {
+        permissionGranted = hasPermission()
+        if (permissionGranted) {
+            lifecycleScope.launch { PartyService.refreshState(this@MainActivity) }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // L'etat vit en memoire : au retour dans l'application, il faut verifier
+        // que les enceintes ne sont pas deja en service.
+        if (permissionGranted) {
+            lifecycleScope.launch { PartyService.refreshState(this@MainActivity) }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,11 +105,17 @@ class MainActivity : ComponentActivity() {
                             settings.primary = primary
                             settings.secondary = secondary
                             settings.phoneMac = phoneMac
+                            AlarmScheduler.reschedule(context)
                             screen = Screen.PARTY
                         }
 
-                        screen == Screen.INFO -> InfoScreen(
+                        screen == Screen.SETTINGS -> SettingsScreen(
+                            settings = settings,
+                            canScheduleExactAlarms = AlarmScheduler.canScheduleExact(context),
                             onOpenUrl = ::openUrl,
+                            onChangeSpeakers = { screen = Screen.SETUP },
+                            onChangeMusicApp = { screen = Screen.MUSIC_PICKER },
+                            onAlarmToggled = ::onAlarmToggled,
                             onBack = { screen = Screen.PARTY }
                         )
 
@@ -107,10 +133,9 @@ class MainActivity : ComponentActivity() {
                             settings = settings,
                             musicApp = musicApp,
                             onPress = ::togglePower,
-                            onOpenMusic = { openMusicApp(musicApp) },
+                            onOpenMusic = { MusicLauncher.open(this, settings) },
                             onPickMusic = { screen = Screen.MUSIC_PICKER },
-                            onInfo = { screen = Screen.INFO },
-                            onReconfigure = { settings.clear(); musicApp = null; screen = Screen.SETUP }
+                            onSettings = { screen = Screen.SETTINGS }
                         )
                     }
                 }
@@ -127,9 +152,25 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun openMusicApp(packageName: String?) {
-        val intent = packageName?.let { packageManager.getLaunchIntentForPackage(it) } ?: return
-        startActivity(intent)
+    /**
+     * Programmer une alarme exacte demande une autorisation explicite depuis
+     * Android 12 : on emmene l'utilisateur au bon endroit plutot que d'echouer
+     * en silence.
+     */
+    private fun onAlarmToggled() {
+        val settings = Settings(this)
+        if (settings.alarmEnabled && !AlarmScheduler.canScheduleExact(this)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                runCatching {
+                    startActivity(
+                        Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                            .setData(Uri.parse("package:$packageName"))
+                    )
+                }
+            }
+            return
+        }
+        AlarmScheduler.reschedule(this)
     }
 
     private fun openUrl(url: String) {
@@ -178,7 +219,6 @@ private fun PermissionScreen(onRetry: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PartyScreen(
     settings: Settings,
@@ -186,11 +226,24 @@ private fun PartyScreen(
     onPress: () -> Unit,
     onOpenMusic: () -> Unit,
     onPickMusic: () -> Unit,
-    onInfo: () -> Unit,
-    onReconfigure: () -> Unit
+    onSettings: () -> Unit
 ) {
     val state by PartyService.state.collectAsState()
     val context = LocalContext.current
+
+    var countdownShown by remember { mutableStateOf(false) }
+    var countdownDone by remember { mutableStateOf(false) }
+
+    // Le decompte n'a de sens que si l'ecran est visible : declenchee par une
+    // routine, la sequence ouvre la musique directement.
+    LaunchedEffect(state.step) {
+        if (state.step == Step.READY && musicApp != null && !countdownDone) {
+            countdownShown = true
+        }
+        if (state.step == Step.IDLE) {
+            countdownDone = false
+        }
+    }
 
     val progress = when (state.step) {
         Step.IDLE, Step.FAILED -> 0f
@@ -198,16 +251,31 @@ private fun PartyScreen(
         Step.WAKING_PRIMARY -> 0.5f
         Step.LINKING -> 0.75f
         Step.CONNECTING_AUDIO -> 0.9f
-        Step.POWERING_OFF -> 0.15f
+        Step.FADING_OUT, Step.POWERING_OFF -> 0.15f
         Step.READY -> 1f
     }
     val running = state.step !in setOf(Step.IDLE, Step.READY, Step.FAILED)
 
-    val reducedMotion = android.provider.Settings.Global.getFloat(
+    val reducedMotion = AndroidSettings.Global.getFloat(
         context.contentResolver,
-        android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+        AndroidSettings.Global.ANIMATOR_DURATION_SCALE,
         1f
     ) == 0f
+
+    if (countdownShown) {
+        CountdownDialog(
+            seconds = Config.MUSIC_COUNTDOWN_SECONDS,
+            onOpenNow = {
+                countdownShown = false
+                countdownDone = true
+                onOpenMusic()
+            },
+            onDismiss = {
+                countdownShown = false
+                countdownDone = true
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -224,16 +292,16 @@ private fun PartyScreen(
         ) {
             Text(
                 stringResource(R.string.app_name).uppercase(),
-                style = Display.copy(fontSize = 24.sp),
+                style = Display.copy(fontSize = TITLE_SIZE),
                 color = Party.Silkscreen
             )
             Text(
-                "i",
+                stringResource(R.string.settings_glyph),
                 style = Display.copy(fontSize = 20.sp),
                 color = Party.Muted,
                 modifier = Modifier
-                    .clickable(onClick = onInfo)
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                    .clickable(onClick = onSettings)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             )
         }
 
@@ -287,17 +355,7 @@ private fun PartyScreen(
                 text = listOfNotNull(settings.primary?.name, settings.secondary?.name)
                     .joinToString(" · "),
                 style = Body.copy(fontSize = 13.sp),
-                color = Party.Muted,
-                modifier = Modifier.combinedClickable(
-                    onClick = onPickMusic,
-                    onLongClick = onReconfigure
-                )
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.reconfigure_hint),
-                style = Body.copy(fontSize = 12.sp),
-                color = Party.Muted.copy(alpha = 0.6f)
+                color = Party.Muted
             )
         }
     }

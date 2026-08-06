@@ -4,9 +4,15 @@ Réveille deux enceintes JBL PartyBox et les met en paire stéréo sans fil, d'u
 
 L'application suit la langue du téléphone : elle s'appelle **Boîte de Fête** en français, **Party Pair** partout ailleurs.
 
-L'application JBL officielle demande une dizaine de manipulations pour rétablir la liaison stéréo, qui ne survit pas à l'extinction des enceintes. Celle-ci le fait en un appui, et se laisse déclencher par Tasker ou Home Assistant.
+L'application JBL officielle demande une dizaine de manipulations pour rétablir la liaison stéréo, qui ne survit pas à l'extinction des enceintes. Celle-ci le fait en un appui, et se laisse déclencher par une routine, une alarme ou Home Assistant.
 
-Le protocole BLE utilisé n'était pas documenté publiquement. Il a été reconstitué par analyse de captures HCI et décompilation de l'application officielle : voir [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
+## Comment ça marche
+
+Les PartyBox exposent un service BLE propriétaire — trames `AA <commande> <longueur> <payload>` — qui n'était documenté nulle part. Il a été reconstitué en croisant des captures HCI Bluetooth et la décompilation de l'application officielle. La commande d'appairage stéréo tient en sept octets.
+
+Tout est écrit dans **[`docs/PROTOCOL.md`](docs/PROTOCOL.md)** : table des opcodes, champs TLV, séquences vérifiées. C'est réutilisable pour n'importe quel client, Android ou non.
+
+> **Matériel vérifié : PartyBox 710 uniquement.** Le protocole devrait valoir pour toute la gamme, mais rien d'autre n'a été testé. Si vous l'essayez sur un autre modèle, [ouvrez une issue](https://github.com/louim-lbs/PartyPair/issues) pour dire ce qui marche — c'est ce qui fera avancer le sujet.
 
 ## Ce que fait l'application
 
@@ -17,7 +23,9 @@ Le protocole BLE utilisé n'était pas documenté publiquement. Il a été recon
 5. Vérifie que l'enceinte principale a bien rejoint le téléphone en audio, et relance l'invitation sinon
 6. Ferme les connexions
 
-Un second appui sur le bouton remet les deux enceintes en veille.
+Un second appui sur le bouton abaisse le volume en fondu, puis remet les deux enceintes en veille.
+
+Si la paire stéréo tient déjà, l'application le détecte et ne la refait pas.
 
 La liaison stéréo survit à la fermeture des connexions BLE : l'application n'a rien à maintenir ensuite.
 
@@ -58,6 +66,18 @@ gradle wrapper          # une seule fois, pour générer le wrapper
 
 Le projet vise l'API 35 et fonctionne à partir d'Android 8.
 
+## Réveil
+
+Dans les réglages, l'option *Réveiller les enceintes avec mon alarme* utilise la **prochaine alarme programmée sur le téléphone**, quelle que soit l'application qui l'a posée — la question des alarmes multiples se règle donc d'elle-même. Les enceintes s'allument une minute avant, la musique se lance, et l'application se reprogramme pour la fois suivante.
+
+Android demandera l'autorisation de programmer des alarmes exactes. Pensez aussi à exempter l'application de l'optimisation de batterie, sans quoi le système peut retarder le déclenchement.
+
+**Gardez votre alarme habituelle en secours.** Une enceinte débranchée ou hors de portée ne doit pas vous faire dormir trop longtemps.
+
+## Volume
+
+Le volume appliqué à chaque réveil se règle dans les réglages, sur l'échelle 0 à 32 de l'enceinte. C'est ce qui évite qu'une soirée à plein volume ne devienne un réveil brutal.
+
 ## Automatisation
 
 L'activité `TriggerActivity` lance la séquence sans afficher d'interface.
@@ -80,6 +100,8 @@ adb shell am start -n fr.boitedefete/.TriggerActivity
 - **Veille** — remet les deux enceintes en veille
 
 Dans *Paramètres → Modes et routines → Routines → +*, choisissez votre déclencheur sous **Si**, puis sous **Alors** l'action *Ouvrir une application* et sélectionnez le raccourci voulu. Aucune interface ne s'affiche : la séquence s'exécute puis rend la main.
+
+**Réglages rapides** — une tuile est disponible dans le volet des notifications, à ajouter depuis le bouton d'édition. Elle reprend la bascule du bouton principal.
 
 **Home Assistant**, via l'intégration Android compagnon et une commande à distance, ou depuis un Tasker déclenché par MQTT.
 
@@ -112,11 +134,15 @@ asyncio.run(main())
 
 Pour que les enceintes se connectent au dongle Bluetooth plutôt qu'au téléphone, envoyez `AA 84 06` suivi des six octets de l'adresse du dongle avant la commande de liaison.
 
+## Limites connues
+
+L'application officielle JBL et celle-ci ne peuvent pas parler à une enceinte en même temps : fermez l'une avant d'utiliser l'autre.
+
+Aucune interface publique ne permet de demander à une application musicale de jouer un morceau précis. L'application ouvre la playlist si un lien est renseigné, puis simule la touche « lecture » d'un casque — ce que la plupart des lecteurs honorent. Le résultat dépend de l'application musicale.
+
 ## Matériel testé
 
 Deux JBL PartyBox 710, Samsung Galaxy S20 FE sous Android 13, application JBL PartyBox 3.14.1.
-
-Le protocole est commun à la gamme PartyBox et devrait fonctionner sur d'autres modèles. Les retours sont bienvenus.
 
 ## Langues
 

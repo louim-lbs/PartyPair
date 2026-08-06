@@ -25,4 +25,17 @@ object Config {
 
     /** Delai d'attente de la connexion audio de l'enceinte principale. */
     const val AUDIO_TIMEOUT_MS = 12_000L
+
+    /** Tentatives de connexion avant d'abandonner. */
+    const val CONNECT_ATTEMPTS = 2
+
+    /** Paliers du fondu sonore avant la mise en veille. */
+    const val FADE_STEPS = 12
+    const val FADE_STEP_MS = 180L
+
+    /** Delai pour interroger Android sur ses connexions audio. */
+    const val PROBE_TIMEOUT_MS = 4_000L
+
+    /** Decompte avant l'ouverture de l'application musicale, en secondes. */
+    const val MUSIC_COUNTDOWN_SECONDS = 5
 }

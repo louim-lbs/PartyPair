@@ -1,5 +1,6 @@
 package fr.boitedefete.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,6 +37,7 @@ fun MusicAppPicker(
     onPick: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    BackHandler(onBack = onBack)
     val context = LocalContext.current
 
     Column(
