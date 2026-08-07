@@ -43,6 +43,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import fr.boitedefete.ui.BoiteDeFeteTheme
 import fr.boitedefete.ui.Body
+import fr.boitedefete.ui.ControlEntry
+import fr.boitedefete.ui.ControlRow
 import fr.boitedefete.ui.CountdownDialog
 import fr.boitedefete.ui.Display
 import fr.boitedefete.ui.DriverButton
@@ -50,6 +52,7 @@ import fr.boitedefete.ui.MusicAppPicker
 import fr.boitedefete.ui.MusicButton
 import fr.boitedefete.ui.Party
 import fr.boitedefete.ui.SetupScreen
+import fr.boitedefete.ui.SleepDialog
 import fr.boitedefete.ui.SettingsScreen
 import fr.boitedefete.ui.Silkscreen
 
@@ -94,35 +97,37 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(if (settings.isConfigured) Screen.PARTY else Screen.SETUP)
                     }
                     var musicApp by remember { mutableStateOf(settings.musicApp) }
+                    // Annuler n'a de sens que si une configuration existe deja.
+                    var reconfiguring by remember { mutableStateOf(false) }
 
                     when {
                         !permissionGranted -> PermissionScreen(onRetry = ::askPermission)
 
                         screen == Screen.SETUP -> SetupScreen(
                             paired = Settings.pairedDevices(context),
-                            detectedPhoneMac = Settings.detectPhoneMac(context)
+                            detectedPhoneMac = Settings.detectPhoneMac(context),
+                            onCancel = if (reconfiguring) {
+                                { reconfiguring = false; screen = Screen.SETTINGS }
+                            } else {
+                                null
+                            }
                         ) { primary, secondary, phoneMac ->
                             settings.primary = primary
                             settings.secondary = secondary
                             settings.phoneMac = phoneMac
                             AlarmScheduler.reschedule(context)
+                            reconfiguring = false
                             screen = Screen.PARTY
                         }
 
                         screen == Screen.SETTINGS -> SettingsScreen(
                             settings = settings,
-                            canScheduleExactAlarms = AlarmScheduler.canScheduleExact(context),
                             onOpenUrl = ::openUrl,
-                            onChangeSpeakers = { screen = Screen.SETUP },
+                            onChangeSpeakers = { reconfiguring = true; screen = Screen.SETUP },
                             onChangeMusicApp = { screen = Screen.MUSIC_PICKER },
                             onSwapChannels = {
                                 PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
                             },
-                            onSleepTimer = { minutes ->
-                                if (minutes == null) SleepTimer.cancel(this)
-                                else SleepTimer.schedule(this, minutes)
-                            },
-                            onAlarmToggled = ::onAlarmToggled,
                             onBack = { screen = Screen.PARTY }
                         )
 
@@ -142,7 +147,10 @@ class MainActivity : ComponentActivity() {
                             onPress = ::togglePower,
                             onOpenMusic = { MusicLauncher.open(this, settings) },
                             onPickMusic = { screen = Screen.MUSIC_PICKER },
-                            onSettings = { screen = Screen.SETTINGS }
+                            onSettings = { screen = Screen.SETTINGS },
+                            onCycleBass = ::cycleBassBoost,
+                            onSleepTimer = ::setSleepTimer,
+                            onToggleAlarm = ::toggleAlarm
                         )
                     }
                 }
@@ -155,6 +163,33 @@ class MainActivity : ComponentActivity() {
      * La decision revient au controleur, qui verifie l'etat reel des enceintes.
      */
     private fun togglePower() = PartyService.start(this, PartyService.ACTION_TOGGLE)
+
+    /**
+     * Fait defiler les trois etats du renforcement des graves.
+     * Si les enceintes jouent, le changement s'applique tout de suite.
+     */
+    private fun cycleBassBoost(): Int {
+        val settings = Settings(this)
+        val next = (settings.bassBoost + 1) % 3
+        settings.bassBoost = next
+        if (PartyService.state.value.step == Step.READY) {
+            PartyService.start(this, PartyService.ACTION_APPLY_SOUND)
+        }
+        return next
+    }
+
+    private fun setSleepTimer(minutes: Int?) {
+        if (minutes == null) SleepTimer.cancel(this) else SleepTimer.schedule(this, minutes)
+    }
+
+    /** Active ou coupe le declenchement avant l'alarme du telephone. */
+    private fun toggleAlarm(): Boolean {
+        val settings = Settings(this)
+        val wanted = !settings.alarmEnabled
+        settings.alarmEnabled = wanted
+        onAlarmToggled()
+        return settings.alarmEnabled
+    }
 
     /**
      * Programmer une alarme exacte demande une autorisation explicite depuis
@@ -247,10 +282,18 @@ private fun PartyScreen(
     onPress: () -> Unit,
     onOpenMusic: () -> Unit,
     onPickMusic: () -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onCycleBass: () -> Int,
+    onSleepTimer: (Int?) -> Unit,
+    onToggleAlarm: () -> Boolean
 ) {
     val state by PartyService.state.collectAsState()
     val context = LocalContext.current
+
+    var bass by remember { mutableStateOf(settings.bassBoost) }
+    var alarmOn by remember { mutableStateOf(settings.alarmEnabled) }
+    var sleepLeft by remember { mutableStateOf(SleepTimer.remainingMinutes(context)) }
+    var sleepDialog by remember { mutableStateOf(false) }
 
     // La proposition vit dans le service, pas dans cet ecran : un aller-retour
     // dans les reglages detruirait l'etat local et relancerait le decompte.
@@ -273,6 +316,18 @@ private fun PartyScreen(
         AndroidSettings.Global.ANIMATOR_DURATION_SCALE,
         1f
     ) == 0f
+
+    if (sleepDialog) {
+        SleepDialog(
+            activeMinutes = sleepLeft,
+            onPick = { minutes ->
+                onSleepTimer(minutes)
+                sleepLeft = minutes
+                sleepDialog = false
+            },
+            onDismiss = { sleepDialog = false }
+        )
+    }
 
     if (showCountdown) {
         CountdownDialog(
@@ -350,7 +405,53 @@ private fun PartyScreen(
                 )
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
+
+            ControlRow(
+                entries = listOf(
+                    ControlEntry(
+                        label = stringResource(R.string.bass_boost_short),
+                        value = stringResource(
+                            when (bass) {
+                                1 -> R.string.bass_deep
+                                2 -> R.string.bass_punchy
+                                else -> R.string.bass_off
+                            }
+                        ),
+                        active = bass > 0,
+                        onClick = { bass = onCycleBass() }
+                    ),
+                    ControlEntry(
+                        label = stringResource(R.string.section_sleep),
+                        value = sleepLeft?.let { stringResource(R.string.sleep_minutes, it) }
+                            ?: stringResource(R.string.bass_off),
+                        active = sleepLeft != null,
+                        onClick = {
+                            sleepLeft = SleepTimer.remainingMinutes(context)
+                            sleepDialog = true
+                        }
+                    ),
+                    ControlEntry(
+                        label = stringResource(R.string.section_alarm),
+                        value = stringResource(
+                            if (alarmOn) R.string.control_on else R.string.bass_off
+                        ),
+                        active = alarmOn,
+                        onClick = { alarmOn = onToggleAlarm() }
+                    )
+                )
+            )
+
+            if (alarmOn && !AlarmScheduler.canScheduleExact(context)) {
+                Text(
+                    stringResource(R.string.alarm_permission_needed),
+                    style = Body.copy(fontSize = 12.sp),
+                    color = Party.Orange,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
 
             if (musicApp != null) {
                 MusicButton(

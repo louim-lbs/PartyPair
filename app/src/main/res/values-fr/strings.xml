@@ -70,8 +70,6 @@
     <string name="wake_volume_hint">Appliqué à chaque réveil des enceintes, pour qu\'une soirée forte ne devienne pas un matin brutal.</string>
     <string name="playlist_url">Lien de la playlist</string>
     <string name="playlist_hint">Collez un lien de partage pour l\'ouvrir directement. Laissez vide pour ouvrir simplement l\'application.</string>
-    <string name="alarm_follow">Réveiller les enceintes avec mon alarme</string>
-    <string name="alarm_hint">Utilise la prochaine alarme du téléphone, quelle que soit l\'application qui l\'a posée. Gardez votre alarme habituelle en secours : une enceinte hors de portée ne doit pas vous faire dormir trop longtemps.</string>
     <string name="alarm_permission_needed">Android demande une autorisation pour les alarmes exactes. Réappuyez sur l\'interrupteur pour l\'accorder.</string>
     <string name="countdown_title">Enceintes prêtes</string>
     <string name="countdown_body">La musique démarre dans %1$d s.</string>
@@ -87,7 +85,6 @@
     <string name="balance_hint">Baisse l\'enceinte la plus proche plutôt que de monter l\'autre, pour ne jamais dépasser le niveau demandé.</string>
     <string name="widget_on">Enceintes allumées</string>
     <string name="widget_off">Lancer la fête</string>
-    <string name="bass_boost">Renforcement des graves</string>
     <string name="bass_off">Arrêt</string>
     <string name="bass_deep">Profond</string>
     <string name="bass_punchy">Percutant</string>
@@ -98,4 +95,7 @@
     <string name="sleep_cancel">Annuler la minuterie</string>
     <string name="warning_alone">%1$s n\'a pas répondu — lecture sur %2$s seule.</string>
     <string name="failure_title">Les enceintes n\'ont pas démarré</string>
+    <string name="bass_boost_short">Graves</string>
+    <string name="control_on">Actif</string>
+    <string name="cancel">Annuler</string>
 </resources>

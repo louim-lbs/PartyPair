@@ -1,5 +1,6 @@
 package fr.boitedefete.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,8 +51,12 @@ import fr.boitedefete.SpeakerScanner
 fun SetupScreen(
     paired: List<Speaker>,
     detectedPhoneMac: String?,
+    /** Null au tout premier lancement : il n'y a alors nulle part ou revenir. */
+    onCancel: (() -> Unit)? = null,
     onDone: (primary: Speaker, secondary: Speaker, phoneMac: String) -> Unit
 ) {
+    onCancel?.let { BackHandler(onBack = it) }
+
     var primary by remember { mutableStateOf<Speaker?>(null) }
     var secondary by remember { mutableStateOf<Speaker?>(null) }
     var phoneMac by remember { mutableStateOf(detectedPhoneMac.orEmpty()) }
@@ -62,11 +67,27 @@ fun SetupScreen(
             .background(Party.Cabinet)
             .padding(horizontal = 28.dp, vertical = 40.dp)
     ) {
-        Text(
-            stringResource(R.string.setup_title).uppercase(),
-            style = Display.copy(fontSize = 20.sp),
-            color = Party.Silkscreen
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                stringResource(R.string.setup_title).uppercase(),
+                style = Display.copy(fontSize = 24.sp),
+                color = Party.Silkscreen
+            )
+            onCancel?.let { cancel ->
+                Text(
+                    stringResource(R.string.cancel).uppercase(),
+                    style = Silkscreen.copy(fontSize = 13.sp),
+                    color = Party.Muted,
+                    modifier = Modifier
+                        .clickable(onClick = cancel)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                )
+            }
+        }
         Spacer(Modifier.height(24.dp))
 
         when {

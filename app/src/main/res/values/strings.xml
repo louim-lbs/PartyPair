@@ -75,8 +75,6 @@
     <string name="wake_volume_hint">Applied every time the speakers are woken, so a loud night never turns into a loud morning.</string>
     <string name="playlist_url">Playlist link</string>
     <string name="playlist_hint">Paste a share link to open it directly. Leave empty to just open the app.</string>
-    <string name="alarm_follow">Wake the speakers with my alarm</string>
-    <string name="alarm_hint">Uses the next alarm set on the phone, whichever app created it. Keep your usual alarm as a backup: a speaker out of range should not make you oversleep.</string>
     <string name="alarm_permission_needed">Android needs permission to schedule exact alarms. Tap the switch again to grant it.</string>
     <string name="countdown_title">Speakers ready</string>
     <string name="countdown_body">Music starts in %1$d s.</string>
@@ -92,7 +90,6 @@
     <string name="balance_hint">Lowers the nearer speaker rather than raising the other, so the level you asked for is never exceeded.</string>
     <string name="widget_on">Speakers on</string>
     <string name="widget_off">Start the party</string>
-    <string name="bass_boost">Bass boost</string>
     <string name="bass_off">Off</string>
     <string name="bass_deep">Deep</string>
     <string name="bass_punchy">Punchy</string>
@@ -103,4 +100,7 @@
     <string name="sleep_cancel">Cancel the sleep timer</string>
     <string name="warning_alone">%1$s did not answer — playing on %2$s alone.</string>
     <string name="failure_title">The speakers did not start</string>
+    <string name="bass_boost_short">Bass</string>
+    <string name="control_on">On</string>
+    <string name="cancel">Cancel</string>
 </resources>

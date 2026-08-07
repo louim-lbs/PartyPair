@@ -46,6 +46,10 @@ class PartyService : Service() {
             try {
                 when (action) {
                     ACTION_TOGGLE -> controller.toggle(report)
+                    ACTION_APPLY_SOUND -> {
+                        // Reglage a la volee : on ne touche pas a l'etat affiche.
+                        controller.applySound()
+                    }
                     ACTION_SWAP_CHANNELS -> {
                         report(Step.LINKING)
                         controller.swapChannels()
@@ -142,6 +146,7 @@ class PartyService : Service() {
         const val ACTION_WAKE = "fr.boitedefete.action.WAKE"
         const val ACTION_TOGGLE = "fr.boitedefete.action.TOGGLE"
         const val ACTION_SWAP_CHANNELS = "fr.boitedefete.action.SWAP_CHANNELS"
+        const val ACTION_APPLY_SOUND = "fr.boitedefete.action.APPLY_SOUND"
 
         /** Actions issues d'un geste de l'utilisateur, qui meritent la proposition. */
         private val PROMPTING_ACTIONS = setOf(ACTION_START, ACTION_TOGGLE)

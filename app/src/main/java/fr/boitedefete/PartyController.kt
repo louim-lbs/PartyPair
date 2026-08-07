@@ -219,6 +219,25 @@ class PartyController(private val context: Context) {
         }
     }
 
+    /**
+     * Applique volume, equilibre et graves sans rien d'autre.
+     *
+     * Sert quand l'utilisateur change un reglage alors que les enceintes
+     * jouent : le geste doit s'entendre tout de suite.
+     */
+    suspend fun applySound() {
+        val primaryDevice = settings.primary
+            ?: throw SpeakerException(context.getString(R.string.error_not_configured))
+        val link = connect(adapter(), primaryDevice)
+        try {
+            link.awaitReady(Config.READY_TIMEOUT_MS)
+            applyVolume(link)
+            applyBassBoost(link)
+        } finally {
+            link.close()
+        }
+    }
+
     /** Applique le renforcement des graves retenu dans les reglages. */
     private suspend fun applyBassBoost(primary: SpeakerLink) {
         primary.write(JblProtocol.setBassBoost(settings.bassBoost))
