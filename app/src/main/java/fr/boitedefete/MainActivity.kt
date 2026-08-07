@@ -1,11 +1,16 @@
 package fr.boitedefete
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import android.provider.Settings as AndroidSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -43,6 +48,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import fr.boitedefete.ui.BoiteDeFeteTheme
 import fr.boitedefete.ui.Body
+import fr.boitedefete.ui.ConfirmDialog
 import fr.boitedefete.ui.ControlEntry
 import fr.boitedefete.ui.ControlRow
 import fr.boitedefete.ui.CountdownDialog
@@ -64,6 +70,10 @@ private enum class Screen { PARTY, SETUP, SETTINGS, MUSIC_PICKER }
 class MainActivity : ComponentActivity() {
 
     private var permissionGranted by mutableStateOf(false)
+
+    private val enableBluetooth = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { /* rien a faire : l'utilisateur verra l'etat se mettre a jour */ }
 
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -128,6 +138,13 @@ class MainActivity : ComponentActivity() {
                             onSwapChannels = {
                                 PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
                             },
+                            onExport = ::exportSetup,
+                            onImport = {
+                                if (importSetup()) {
+                                    musicApp = settings.musicApp
+                                    screen = Screen.PARTY
+                                }
+                            },
                             onBack = { screen = Screen.PARTY }
                         )
 
@@ -150,7 +167,9 @@ class MainActivity : ComponentActivity() {
                             onSettings = { screen = Screen.SETTINGS },
                             onCycleBass = ::cycleBassBoost,
                             onSleepTimer = ::setSleepTimer,
-                            onToggleAlarm = ::toggleAlarm
+                            onToggleAlarm = ::toggleAlarm,
+                            bluetoothReady = bluetoothReady(),
+                            onEnableBluetooth = ::askEnableBluetooth
                         )
                     }
                 }
@@ -173,9 +192,44 @@ class MainActivity : ComponentActivity() {
         val next = (settings.bassBoost + 1) % 3
         settings.bassBoost = next
         if (PartyService.state.value.step == Step.READY) {
-            PartyService.start(this, PartyService.ACTION_APPLY_SOUND)
+            PartyService.start(this, PartyService.ACTION_APPLY_BASS)
         }
         return next
+    }
+
+    /** Copie la configuration dans le presse-papiers. */
+    private fun exportSetup() {
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+        clipboard.setPrimaryClip(
+            ClipData.newPlainText(getString(R.string.app_name), Settings(this).export())
+        )
+        Toast.makeText(this, R.string.backup_copied, Toast.LENGTH_SHORT).show()
+    }
+
+    /** Restaure une configuration collee depuis le presse-papiers. */
+    private fun importSetup(): Boolean {
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager
+        val text = clipboard?.primaryClip?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)?.coerceToText(this)?.toString()
+        val restored = !text.isNullOrBlank() && Settings(this).import(text)
+        Toast.makeText(
+            this,
+            if (restored) R.string.backup_restored else R.string.backup_invalid,
+            Toast.LENGTH_LONG
+        ).show()
+        if (restored) AlarmScheduler.reschedule(this)
+        return restored
+    }
+
+    /** Vrai si le Bluetooth est en service. */
+    private fun bluetoothReady(): Boolean {
+        val manager = getSystemService(BLUETOOTH_SERVICE) as? BluetoothManager
+        return manager?.adapter?.isEnabled == true
+    }
+
+    /** Propose d'allumer le Bluetooth plutot que de se contenter de le signaler. */
+    private fun askEnableBluetooth() {
+        runCatching { enableBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
     }
 
     private fun setSleepTimer(minutes: Int?) {
@@ -285,7 +339,9 @@ private fun PartyScreen(
     onSettings: () -> Unit,
     onCycleBass: () -> Int,
     onSleepTimer: (Int?) -> Unit,
-    onToggleAlarm: () -> Boolean
+    onToggleAlarm: () -> Boolean,
+    bluetoothReady: Boolean,
+    onEnableBluetooth: () -> Unit
 ) {
     val state by PartyService.state.collectAsState()
     val context = LocalContext.current
@@ -294,6 +350,7 @@ private fun PartyScreen(
     var alarmOn by remember { mutableStateOf(settings.alarmEnabled) }
     var sleepLeft by remember { mutableStateOf(SleepTimer.remainingMinutes(context)) }
     var sleepDialog by remember { mutableStateOf(false) }
+    var standbyDialog by remember { mutableStateOf(false) }
 
     // La proposition vit dans le service, pas dans cet ecran : un aller-retour
     // dans les reglages detruirait l'etat local et relancerait le decompte.
@@ -316,6 +373,21 @@ private fun PartyScreen(
         AndroidSettings.Global.ANIMATOR_DURATION_SCALE,
         1f
     ) == 0f
+
+    if (standbyDialog) {
+        ConfirmDialog(
+            title = stringResource(R.string.standby_confirm_title),
+            body = stringResource(R.string.standby_confirm_body),
+            confirmLabel = stringResource(R.string.standby_confirm_yes),
+            dismissLabel = stringResource(R.string.standby_confirm_no),
+            onConfirm = { dontAskAgain ->
+                if (dontAskAgain) settings.confirmStandby = false
+                standbyDialog = false
+                onPress()
+            },
+            onDismiss = { standbyDialog = false }
+        )
+    }
 
     if (sleepDialog) {
         SleepDialog(
@@ -373,7 +445,14 @@ private fun PartyScreen(
                 progress = progress,
                 active = running,
                 reducedMotion = reducedMotion,
-                onClick = onPress
+                onClick = {
+                    // Un appui accidentel ne doit pas couper la musique en cours.
+                    if (state.step == Step.READY && settings.confirmStandby) {
+                        standbyDialog = true
+                    } else {
+                        onPress()
+                    }
+                }
             )
         }
 
@@ -384,6 +463,19 @@ private fun PartyScreen(
                 color = if (state.step == Step.FAILED) Party.Orange else Party.Silkscreen,
                 textAlign = TextAlign.Center
             )
+
+            if (!bluetoothReady) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    stringResource(R.string.bluetooth_enable).uppercase(),
+                    style = Silkscreen.copy(fontSize = 13.sp),
+                    color = Party.Orange,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .clickable(onClick = onEnableBluetooth)
+                        .padding(vertical = 6.dp, horizontal = 10.dp)
+                )
+            }
 
             state.warning?.let { warning ->
                 Spacer(Modifier.height(6.dp))

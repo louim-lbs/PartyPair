@@ -48,6 +48,8 @@ fun SettingsScreen(
     onChangeSpeakers: () -> Unit,
     onChangeMusicApp: () -> Unit,
     onSwapChannels: () -> Unit,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
     onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
@@ -136,6 +138,15 @@ fun SettingsScreen(
             style = Body.copy(fontSize = 13.sp),
             color = Party.Muted
         )
+
+        Section(stringResource(R.string.section_backup))
+        Text(
+            stringResource(R.string.backup_hint),
+            style = Body.copy(fontSize = 13.sp),
+            color = Party.Muted
+        )
+        Entry(stringResource(R.string.backup_copy), onClick = onExport)
+        Entry(stringResource(R.string.backup_restore), onClick = onImport)
 
         Section(stringResource(R.string.section_about))
         InfoRow(stringResource(R.string.info_version), BuildConfig.VERSION_NAME)

@@ -111,19 +111,22 @@ Dans *Paramètres → Modes et routines → Routines → +*, choisissez votre d�
 
 **Réglages rapides** — une tuile est disponible dans le volet des notifications, à ajouter depuis le bouton d'édition. Elle reprend la bascule du bouton principal.
 
-**Home Assistant** — l'application compagnon Android sait lancer une activité, ce qui suffit à déclencher l'appairage sans rien coder :
+**Home Assistant** — l'application compagnon Android envoie une diffusion, que l'application reçoit sans rien afficher :
 
 ```yaml
-service: notify.mobile_app_votre_telephone
+action: notify.mobile_app_votre_telephone
 data:
-  message: command_activity
+  message: command_broadcast_intent
   data:
     intent_package_name: fr.boitedefete
-    intent_class_name: fr.boitedefete.TriggerActivity
-    intent_action: fr.boitedefete.action.TOGGLE
+    intent_action: fr.boitedefete.action.POWER_OFF
 ```
 
-Remplacez l'action par `fr.boitedefete.action.START`, `POWER_OFF` ou `UNLINK` selon le besoin. Le téléphone doit être à portée des enceintes, puisque c'est lui qui leur parle.
+Actions disponibles : `START` pour réveiller et apparier, `POWER_OFF` pour la mise en veille avec fondu, `TOGGLE` pour basculer selon l'état réel, `UNLINK` pour rompre la paire sans éteindre.
+
+Préférez `command_broadcast_intent` à `command_activity` : ce dernier réclame l'autorisation « Superposition à d'autres applications » et fait brièvement basculer l'écran.
+
+Le téléphone doit être à portée des enceintes, puisque c'est lui qui leur parle. Pour une routine déclenchée en partant de chez vous, prévoyez que la commande arrive pendant que le téléphone est encore là.
 
 Pour piloter les enceintes **sans le téléphone**, il faut une machine avec Bluetooth — un Raspberry Pi, ou le NAS. Le script `bleak` du paragraphe précédent, exposé en `shell_command` ou via MQTT, suffit : les enceintes n'ont besoin que de quelques secondes de contact BLE, sans maintien de connexion.
 
@@ -155,6 +158,10 @@ asyncio.run(main())
 ```
 
 Pour que les enceintes se connectent au dongle Bluetooth plutôt qu'au téléphone, envoyez `AA 84 06` suivi des six octets de l'adresse du dongle avant la commande de liaison.
+
+## Sauvegarde
+
+Les réglages proposent de copier la configuration dans le presse-papiers, et de la restaurer par collage. Utile avant de changer de téléphone, ou après une désinstallation.
 
 ## Limites connues
 

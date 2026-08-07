@@ -121,6 +121,22 @@
             </intent-filter>
         </receiver>
 
+        <!--
+            Commandes par diffusion, pour Home Assistant et les automatisations.
+            Contrairement au lancement d'activite, cette voie ne reclame aucune
+            autorisation et n'interrompt pas ce qui est a l'ecran.
+        -->
+        <receiver
+            android:name=".CommandReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="fr.boitedefete.action.START" />
+                <action android:name="fr.boitedefete.action.TOGGLE" />
+                <action android:name="fr.boitedefete.action.POWER_OFF" />
+                <action android:name="fr.boitedefete.action.UNLINK" />
+            </intent-filter>
+        </receiver>
+
         <!-- Bouton d'ecran d'accueil. -->
         <receiver
             android:name=".PartyWidget"

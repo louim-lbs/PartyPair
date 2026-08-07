@@ -70,6 +70,13 @@ class PartyController(private val context: Context) {
                     delay(300)
                 }
 
+                // Une enceinte qui n'a jamais eu de partenaire ne peut pas etre
+                // appairee par ce protocole : l'association initiale se fait
+                // dans l'application JBL. Autant le dire clairement.
+                if (secondary != null && primary.partnerMac == JblProtocol.NO_PARTNER) {
+                    throw SpeakerException(context.getString(R.string.error_never_paired))
+                }
+
                 // Inutile de refaire la paire si elle tient deja.
                 if (secondary != null && !primary.isStereoLinked()) {
                     onStep(Step.LINKING)
@@ -220,18 +227,18 @@ class PartyController(private val context: Context) {
     }
 
     /**
-     * Applique volume, equilibre et graves sans rien d'autre.
+     * Applique le renforcement des graves seul, sans toucher au volume.
      *
-     * Sert quand l'utilisateur change un reglage alors que les enceintes
-     * jouent : le geste doit s'entendre tout de suite.
+     * Sert quand l'utilisateur change ce reglage alors que les enceintes
+     * jouent : le geste doit s'entendre tout de suite, mais il ne doit surtout
+     * pas ramener le volume au niveau de reveil.
      */
-    suspend fun applySound() {
+    suspend fun applyBassOnly() {
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val link = connect(adapter(), primaryDevice)
         try {
             link.awaitReady(Config.READY_TIMEOUT_MS)
-            applyVolume(link)
             applyBassBoost(link)
         } finally {
             link.close()

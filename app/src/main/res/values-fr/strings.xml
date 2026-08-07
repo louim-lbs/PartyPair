@@ -98,4 +98,18 @@
     <string name="bass_boost_short">Graves</string>
     <string name="control_on">Actif</string>
     <string name="cancel">Annuler</string>
+    <string name="section_backup">Sauvegarde</string>
+    <string name="backup_hint">Gardez une copie de votre configuration quelque part — une note, un message à vous-même.</string>
+    <string name="backup_copy">Copier la configuration</string>
+    <string name="backup_restore">Restaurer depuis le presse-papiers</string>
+    <string name="backup_copied">Configuration copiée dans le presse-papiers.</string>
+    <string name="backup_restored">Configuration restaurée.</string>
+    <string name="backup_invalid">Le presse-papiers ne contient pas de configuration valide.</string>
+    <string name="error_never_paired">Ces enceintes n\'ont jamais été appairées entre elles. Faites-le une fois dans l\'application JBL : ensuite, cette application saura rétablir la liaison toute seule.</string>
+    <string name="bluetooth_enable">Activer le Bluetooth</string>
+    <string name="standby_confirm_title">Mettre les enceintes en veille ?</string>
+    <string name="standby_confirm_body">Le son descendra en fondu, puis les deux enceintes s\'éteindront.</string>
+    <string name="standby_confirm_yes">Mettre en veille</string>
+    <string name="standby_confirm_no">Continuer</string>
+    <string name="dont_ask_again">Ne plus demander</string>
 </resources>

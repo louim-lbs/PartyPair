@@ -103,4 +103,18 @@
     <string name="bass_boost_short">Bass</string>
     <string name="control_on">On</string>
     <string name="cancel">Cancel</string>
+    <string name="section_backup">Backup</string>
+    <string name="backup_hint">Keep a copy of your setup somewhere safe — a note, a message to yourself.</string>
+    <string name="backup_copy">Copy the setup</string>
+    <string name="backup_restore">Restore from clipboard</string>
+    <string name="backup_copied">Setup copied to the clipboard.</string>
+    <string name="backup_restored">Setup restored.</string>
+    <string name="backup_invalid">The clipboard does not hold a valid setup.</string>
+    <string name="error_never_paired">These speakers have never been paired together. Do it once in the JBL app, then this app can rebuild the link on its own.</string>
+    <string name="bluetooth_enable">Turn Bluetooth on</string>
+    <string name="standby_confirm_title">Put the speakers to sleep?</string>
+    <string name="standby_confirm_body">The sound will fade out, then both speakers switch off.</string>
+    <string name="standby_confirm_yes">Sleep</string>
+    <string name="standby_confirm_no">Keep playing</string>
+    <string name="dont_ask_again">Do not ask again</string>
 </resources>

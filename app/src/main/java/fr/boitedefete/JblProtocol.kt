@@ -39,6 +39,12 @@ object JblProtocol {
     const val RESP_DEV_INFO = 0x12.toByte()
     const val RESP_PLAYER_INFO = 0x42.toByte()
 
+    /** Adresse de l'enceinte partenaire, annoncee spontanement a la connexion. */
+    const val NOTIFY_SECONDARY_ADDRESS = 0x85.toByte()
+
+    /** Valeur renvoyee quand aucune enceinte partenaire n'est memorisee. */
+    const val NO_PARTNER = "FF:FF:FF:FF:FF:FF"
+
     // Tags TLV
     const val TAG_CHANNEL = 0x35
     const val TAG_PARTY_CONNECT = 0x39

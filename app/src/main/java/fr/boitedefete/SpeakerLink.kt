@@ -23,8 +23,19 @@ import kotlin.coroutines.resumeWithException
 class SpeakerLink private constructor(
     private val gatt: BluetoothGatt,
     private val tx: BluetoothGattCharacteristic,
-    private val notifications: MutableSharedFlow<ByteArray>
+    private val inbox: Inbox
 ) {
+
+    private val notifications get() = inbox.flow
+
+    /**
+     * Adresse de l'enceinte partenaire memorisee, relevee au vol.
+     *
+     * L'enceinte annonce spontanement cette valeur a la connexion, sans qu'on
+     * la demande. `FF:FF:FF:FF:FF:FF` signifie qu'aucune paire n'a jamais ete
+     * formee : l'appairage initial doit alors passer par l'application JBL.
+     */
+    val partnerMac: String? get() = inbox.partnerMac
 
     fun write(value: ByteArray) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -116,10 +127,7 @@ class SpeakerLink private constructor(
                 val settled = AtomicBoolean(false)
                 var gattRef: BluetoothGatt? = null
 
-                val notifications = MutableSharedFlow<ByteArray>(
-                    extraBufferCapacity = 16,
-                    onBufferOverflow = BufferOverflow.DROP_OLDEST
-                )
+                val inbox = Inbox()
 
                 val callback = object : BluetoothGattCallback() {
 
@@ -164,7 +172,7 @@ class SpeakerLink private constructor(
                         characteristic: BluetoothGattCharacteristic
                     ) {
                         @Suppress("DEPRECATION")
-                        characteristic.value?.let { notifications.tryEmit(it) }
+                        characteristic.value?.let { inbox.accept(it) }
                     }
 
                     override fun onCharacteristicChanged(
@@ -172,7 +180,7 @@ class SpeakerLink private constructor(
                         characteristic: BluetoothGattCharacteristic,
                         value: ByteArray
                     ) {
-                        notifications.tryEmit(value)
+                        inbox.accept(value)
                     }
                 }
 
@@ -183,6 +191,35 @@ class SpeakerLink private constructor(
                     runCatching { gattRef?.close() }
                 }
             }
+    }
+}
+
+/**
+ * Recueille les notifications de l'enceinte.
+ *
+ * Certaines arrivent avant qu'on ne pense a les ecouter : on retient donc au
+ * passage celles qui nous serviront plus tard, plutot que de compter sur un
+ * abonnement pose a temps.
+ */
+private class Inbox {
+
+    val flow = MutableSharedFlow<ByteArray>(
+        extraBufferCapacity = 32,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    @Volatile
+    var partnerMac: String? = null
+        private set
+
+    fun accept(frame: ByteArray) {
+        if (JblProtocol.commandOf(frame) == JblProtocol.NOTIFY_SECONDARY_ADDRESS &&
+            frame.size >= 9
+        ) {
+            partnerMac = frame.copyOfRange(3, 9)
+                .joinToString(":") { "%02X".format(it) }
+        }
+        flow.tryEmit(frame)
     }
 }
 

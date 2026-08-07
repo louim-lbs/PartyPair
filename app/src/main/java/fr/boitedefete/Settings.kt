@@ -87,6 +87,11 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_BASS_BOOST, 0)
         set(value) = prefs.edit().putInt(KEY_BASS_BOOST, value.coerceIn(0, 2)).apply()
 
+    /** Confirmation avant la mise en veille, pour parer un appui accidentel. */
+    var confirmStandby: Boolean
+        get() = prefs.getBoolean(KEY_CONFIRM_STANDBY, true)
+        set(value) = prefs.edit().putBoolean(KEY_CONFIRM_STANDBY, value).apply()
+
     /** Echeance de mise en veille automatique, ou 0 si aucune n'est posee. */
     var sleepAt: Long
         get() = prefs.getLong(KEY_SLEEP_AT, 0L)
@@ -104,6 +109,53 @@ class Settings(context: Context) {
 
     val isConfigured: Boolean
         get() = primary != null && secondary != null
+
+    /**
+     * Configuration sous forme de texte, a copier ailleurs.
+     * Ne contient que ce qui serait penible a ressaisir.
+     */
+    fun export(): String = buildList {
+        primary?.let { add("principale=${it.name}|${it.mac}") }
+        secondary?.let { add("secondaire=${it.name}|${it.mac}") }
+        if (phoneMac.isNotBlank()) add("telephone=$phoneMac")
+        musicApp?.let { add("musique=$it") }
+        if (musicUrl.isNotBlank()) add("playlist=$musicUrl")
+        add("volume=$wakeVolume")
+        add("equilibre=$balance")
+        add("graves=$bassBoost")
+    }.joinToString("\n")
+
+    /**
+     * Restaure une configuration exportee. Les lignes inconnues sont ignorees,
+     * et une entree absente laisse la valeur en place.
+     *
+     * @return vrai si au moins une enceinte a ete reconnue.
+     */
+    fun import(text: String): Boolean {
+        var recognized = false
+        text.lineSequence().forEach { line ->
+            val (key, value) = line.split("=", limit = 2).takeIf { it.size == 2 } ?: return@forEach
+            when (key.trim()) {
+                "principale" -> parseSpeaker(value)?.let { primary = it; recognized = true }
+                "secondaire" -> parseSpeaker(value)?.let { secondary = it; recognized = true }
+                "telephone" -> phoneMac = value
+                "musique" -> musicApp = value.trim()
+                "playlist" -> musicUrl = value
+                "volume" -> value.trim().toIntOrNull()?.let { wakeVolume = it }
+                "equilibre" -> value.trim().toIntOrNull()?.let { balance = it }
+                "graves" -> value.trim().toIntOrNull()?.let { bassBoost = it }
+            }
+        }
+        return recognized
+    }
+
+    private fun parseSpeaker(value: String): Speaker? {
+        val parts = value.split("|", limit = 2)
+        if (parts.size != 2) return null
+        val mac = MacFormat.normalize(parts[1])
+        if (!MacFormat.isComplete(mac)) return null
+        return Speaker(parts[0].trim(), mac)
+    }
 
     /** Efface toute la configuration. Reserve a une action explicite. */
     fun clear() {
@@ -144,6 +196,7 @@ class Settings(context: Context) {
         private const val KEY_BALANCE = "balance"
         private const val KEY_BASS_BOOST = "bass_boost"
         private const val KEY_SLEEP_AT = "sleep_at"
+        private const val KEY_CONFIRM_STANDBY = "confirm_standby"
         private const val KEY_PRIMARY_CHANNEL = "primary_channel"
         private const val KEY_SECONDARY_CHANNEL = "secondary_channel"
 
