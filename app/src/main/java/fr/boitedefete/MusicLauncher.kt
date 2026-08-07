@@ -10,9 +10,9 @@ import android.view.KeyEvent
  * Ouvre l'application musicale et tente de lancer la lecture.
  *
  * Aucune interface publique ne permet de demander a une application musicale de
- * jouer un morceau precis. On procede donc en deux temps : ouvrir la playlist
- * si une adresse est connue, puis simuler la touche « lecture » d'un casque, ce
- * que la plupart des lecteurs honorent en reprenant la derniere ecoute.
+ * jouer un morceau precis. On procede donc en deux temps : ouvrir la playlist si
+ * une adresse est connue, puis simuler la touche « lecture » d'un casque, ce que
+ * la plupart des lecteurs honorent en reprenant la derniere ecoute.
  */
 object MusicLauncher {
 
@@ -21,24 +21,19 @@ object MusicLauncher {
         val packageName = settings.musicApp ?: return false
         val url = settings.musicUrl
 
-        val intent = if (url.isNotBlank()) {
-            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+        if (url.isNotBlank()) {
+            val deepLink = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
                 setPackage(packageName)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-        } else {
-            context.packageManager.getLaunchIntentForPackage(packageName)
-                ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-        } ?: return false
+            if (runCatching { context.startActivity(deepLink) }.isSuccess) return true
+            // L'application ne gere pas cette adresse : on l'ouvre simplement.
+        }
 
-        return runCatching { context.startActivity(intent) }
-            .recoverCatching {
-                // L'adresse n'est pas gérée par l'application : on l'ouvre simplement.
-                val fallback = context.packageManager.getLaunchIntentForPackage(packageName)
-                    ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) } ?: return false
-                context.startActivity(fallback)
-            }
-            .isSuccess
+        val launch = context.packageManager.getLaunchIntentForPackage(packageName)
+            ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+            ?: return false
+        return runCatching { context.startActivity(launch) }.isSuccess
     }
 
     /**

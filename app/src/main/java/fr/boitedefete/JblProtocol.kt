@@ -101,8 +101,12 @@ object JblProtocol {
      * C'est ce qui lui fait rejoindre le telephone (ou le dongle) pour l'audio.
      */
     fun connectTo(macAddress: String): ByteArray {
-        val bytes = macAddress.split(":").map { it.toInt(16).toByte() }.toByteArray()
-        require(bytes.size == 6) { "Adresse Bluetooth invalide : $macAddress" }
+        // On ne se fie pas aux separateurs : seuls les chiffres hexadecimaux
+        // comptent. Une adresse saisie avec un point-virgule, un tiret ou une
+        // espace reste ainsi exploitable.
+        val hex = macAddress.filter { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
+        require(hex.length == 12) { "Adresse Bluetooth invalide : $macAddress" }
+        val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
         return frame(CMD_SET_PHONE_MAC, bytes)
     }
 

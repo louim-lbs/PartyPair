@@ -33,7 +33,9 @@ class Settings(context: Context) {
 
     /** Adresse Bluetooth du telephone, transmise a l'enceinte principale. */
     var phoneMac: String
-        get() = prefs.getString(KEY_PHONE_MAC, "").orEmpty()
+        // Normalisee aussi a la lecture : une adresse enregistree avant la mise
+        // en forme automatique, avec un separateur errone, se repare d'elle-meme.
+        get() = MacFormat.normalize(prefs.getString(KEY_PHONE_MAC, "").orEmpty())
         // commit() plutot que apply() : la configuration ne doit pas se perdre
         // si le systeme arrete le processus juste apres la saisie.
         set(value) {

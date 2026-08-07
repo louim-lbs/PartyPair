@@ -8,6 +8,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
@@ -57,9 +58,12 @@ class PartyController(private val context: Context) {
             try {
                 primary.awaitReady(Config.READY_TIMEOUT_MS)
 
-                val phoneMac = settings.phoneMac
+                // L'adresse du telephone ne sert qu'a la connexion audio :
+                // si elle est absente ou mal formee, la paire stereo doit
+                // s'etablir quand meme.
+                val phoneMac = settings.phoneMac.takeIf { MacFormat.isComplete(it) }.orEmpty()
                 if (phoneMac.isNotBlank()) {
-                    primary.write(JblProtocol.connectTo(phoneMac))
+                    runCatching { primary.write(JblProtocol.connectTo(phoneMac)) }
                     delay(300)
                 }
 
@@ -76,7 +80,9 @@ class PartyController(private val context: Context) {
 
                 if (phoneMac.isNotBlank()) {
                     onStep(Step.CONNECTING_AUDIO)
-                    awaitAudio(adapter) { primary.write(JblProtocol.connectTo(phoneMac)) }
+                    awaitAudio(adapter) {
+                        runCatching { primary.write(JblProtocol.connectTo(phoneMac)) }
+                    }
                 }
 
                 onStep(Step.READY)
@@ -177,17 +183,17 @@ class PartyController(private val context: Context) {
                             proxy.connectedDevices.any { it.address.equals(primaryMac, true) }
                         }.getOrDefault(false)
                         runCatching { adapter.closeProfileProxy(profile, proxy) }
-                        if (settled.compareAndSet(false, true)) cont.resume(connected) { _, _, _ -> }
+                        if (settled.compareAndSet(false, true)) cont.resume(connected)
                     }
 
                     override fun onServiceDisconnected(profile: Int) {
-                        if (settled.compareAndSet(false, true)) cont.resume(false) { _, _, _ -> }
+                        if (settled.compareAndSet(false, true)) cont.resume(false)
                     }
                 }
                 val started = runCatching {
                     adapter.getProfileProxy(context, listener, BluetoothProfile.A2DP)
                 }.getOrDefault(false)
-                if (!started && settled.compareAndSet(false, true)) cont.resume(false) { _, _, _ -> }
+                if (!started && settled.compareAndSet(false, true)) cont.resume(false)
             }
         } ?: false
     }
