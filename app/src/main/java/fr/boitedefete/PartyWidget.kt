@@ -41,13 +41,15 @@ class PartyWidget : AppWidgetProvider() {
             val ready = PartyService.state.value.step == Step.READY
             val views = RemoteViews(context.packageName, R.layout.widget_party)
 
-            views.setTextViewText(
-                R.id.widget_label,
-                context.getString(if (ready) R.string.widget_on else R.string.widget_off)
-            )
+            // Icone seule : le widget tient dans une case et se pose sur
+            // n'importe quel fond d'ecran.
             views.setImageViewResource(
                 R.id.widget_icon,
-                if (ready) R.drawable.ic_driver else R.drawable.ic_driver_off
+                if (ready) R.drawable.ic_widget_on else R.drawable.ic_widget_off
+            )
+            views.setContentDescription(
+                R.id.widget_icon,
+                context.getString(if (ready) R.string.widget_on else R.string.widget_off)
             )
             views.setOnClickPendingIntent(R.id.widget_root, togglePendingIntent(context))
             return views

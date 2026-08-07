@@ -92,4 +92,15 @@
     <string name="balance_hint">Lowers the nearer speaker rather than raising the other, so the level you asked for is never exceeded.</string>
     <string name="widget_on">Speakers on</string>
     <string name="widget_off">Start the party</string>
+    <string name="bass_boost">Bass boost</string>
+    <string name="bass_off">Off</string>
+    <string name="bass_deep">Deep</string>
+    <string name="bass_punchy">Punchy</string>
+    <string name="section_sleep">Sleep timer</string>
+    <string name="sleep_none">No sleep timer set.</string>
+    <string name="sleep_in">Speakers will fade out in %1$d min.</string>
+    <string name="sleep_minutes">%1$d min</string>
+    <string name="sleep_cancel">Cancel the sleep timer</string>
+    <string name="warning_alone">%1$s did not answer — playing on %2$s alone.</string>
+    <string name="failure_title">The speakers did not start</string>
 </resources>

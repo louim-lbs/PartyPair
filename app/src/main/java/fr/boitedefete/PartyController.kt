@@ -40,18 +40,21 @@ class PartyController(private val context: Context) {
     private val settings = Settings(context)
 
     suspend fun run(onStep: (Step) -> Unit) {
+        warning = null
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val secondaryDevice = settings.secondary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val adapter = adapter()
 
+        // L'enceinte secondaire peut etre debranchee ou hors de portee. Dans ce
+        // cas on continue avec la principale : de la musique sur une enceinte
+        // vaut mieux que le silence sur deux.
         onStep(Step.WAKING_SECONDARY)
-        val secondary = connect(adapter, secondaryDevice)
+        val secondary = runCatching { connect(adapter, secondaryDevice) }.getOrNull()
+        secondary?.awaitReady(Config.READY_TIMEOUT_MS)
 
         try {
-            secondary.awaitReady(Config.READY_TIMEOUT_MS)
-
             onStep(Step.WAKING_PRIMARY)
             val primary = connect(adapter, primaryDevice)
 
@@ -68,7 +71,7 @@ class PartyController(private val context: Context) {
                 }
 
                 // Inutile de refaire la paire si elle tient deja.
-                if (!primary.isStereoLinked()) {
+                if (secondary != null && !primary.isStereoLinked()) {
                     onStep(Step.LINKING)
                     secondary.write(JblProtocol.TWS_LINK)
                     delay(Config.INTER_WRITE_DELAY_MS)
@@ -76,8 +79,9 @@ class PartyController(private val context: Context) {
                     delay(Config.LINK_SETTLE_MS)
                 }
 
-                rememberChannels(primary, secondary)
+                if (secondary != null) rememberChannels(primary, secondary)
                 applyVolume(primary)
+                applyBassBoost(primary)
 
                 if (phoneMac.isNotBlank()) {
                     onStep(Step.CONNECTING_AUDIO)
@@ -86,14 +90,26 @@ class PartyController(private val context: Context) {
                     }
                 }
 
+                if (secondary == null) {
+                    warning = context.getString(
+                        R.string.warning_alone, secondaryDevice.name, primaryDevice.name
+                    )
+                }
                 onStep(Step.READY)
             } finally {
                 primary.close()
             }
         } finally {
-            secondary.close()
+            secondary?.close()
         }
     }
+
+    /**
+     * Message a afficher a cote de l'etat, quand la sequence a abouti mais
+     * de facon degradee. Null si tout s'est passe normalement.
+     */
+    var warning: String? = null
+        private set
 
     /**
      * Decide seule entre appairer et eteindre, en verifiant l'etat reel.
@@ -201,6 +217,12 @@ class PartyController(private val context: Context) {
             primary.write(JblProtocol.setSecondaryVolume(secondaryLevel))
             delay(120)
         }
+    }
+
+    /** Applique le renforcement des graves retenu dans les reglages. */
+    private suspend fun applyBassBoost(primary: SpeakerLink) {
+        primary.write(JblProtocol.setBassBoost(settings.bassBoost))
+        delay(150)
     }
 
     /** Releve le canal de chaque enceinte pour pouvoir l'afficher plus tard. */

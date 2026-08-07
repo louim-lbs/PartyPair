@@ -74,6 +74,14 @@ Android demandera l'autorisation de programmer des alarmes exactes. Pensez aussi
 
 **Gardez votre alarme habituelle en secours.** Une enceinte débranchée ou hors de portée ne doit pas vous faire dormir trop longtemps.
 
+## Minuterie
+
+Les réglages proposent une mise en veille différée, de 15 minutes à 2 heures. Le volume descend en fondu avant l'extinction, ce qui la rend supportable si vous vous endormez.
+
+## Renforcement des graves
+
+Trois états : arrêt, profond, percutant — appliqués à chaque réveil des enceintes.
+
 ## Volume
 
 Le volume appliqué à chaque réveil se règle dans les réglages, sur l'échelle 0 à 32 de l'enceinte. C'est ce qui évite qu'une soirée à plein volume ne devienne un réveil brutal.
@@ -103,7 +111,21 @@ Dans *Paramètres → Modes et routines → Routines → +*, choisissez votre d�
 
 **Réglages rapides** — une tuile est disponible dans le volet des notifications, à ajouter depuis le bouton d'édition. Elle reprend la bascule du bouton principal.
 
-**Home Assistant**, via l'intégration Android compagnon et une commande à distance, ou depuis un Tasker déclenché par MQTT.
+**Home Assistant** — l'application compagnon Android sait lancer une activité, ce qui suffit à déclencher l'appairage sans rien coder :
+
+```yaml
+service: notify.mobile_app_votre_telephone
+data:
+  message: command_activity
+  data:
+    intent_package_name: fr.boitedefete
+    intent_class_name: fr.boitedefete.TriggerActivity
+    intent_action: fr.boitedefete.action.TOGGLE
+```
+
+Remplacez l'action par `fr.boitedefete.action.START`, `POWER_OFF` ou `UNLINK` selon le besoin. Le téléphone doit être à portée des enceintes, puisque c'est lui qui leur parle.
+
+Pour piloter les enceintes **sans le téléphone**, il faut une machine avec Bluetooth — un Raspberry Pi, ou le NAS. Le script `bleak` du paragraphe précédent, exposé en `shell_command` ou via MQTT, suffit : les enceintes n'ont besoin que de quelques secondes de contact BLE, sans maintien de connexion.
 
 Pour rompre la paire stéréo sans éteindre, utilisez l'action `fr.boitedefete.action.UNLINK`. Pour la mise en veille, `fr.boitedefete.action.POWER_OFF`.
 
@@ -135,6 +157,8 @@ asyncio.run(main())
 Pour que les enceintes se connectent au dongle Bluetooth plutôt qu'au téléphone, envoyez `AA 84 06` suivi des six octets de l'adresse du dongle avant la commande de liaison.
 
 ## Limites connues
+
+Si l'enceinte secondaire ne répond pas, la séquence se poursuit avec la principale seule et le signale, plutôt que d'échouer entièrement. Un échec complet donne lieu à une notification nommant l'enceinte en cause, utile quand le déclenchement vient d'une alarme ou d'une routine.
 
 L'application officielle JBL et celle-ci ne peuvent pas parler à une enceinte en même temps : fermez l'une avant d'utiliser l'autre.
 

@@ -82,6 +82,16 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_SECONDARY_CHANNEL, 0)
         set(value) = prefs.edit().putInt(KEY_SECONDARY_CHANNEL, value).apply()
 
+    /** Renforcement des graves : 0 arret, 1 profond, 2 percutant. */
+    var bassBoost: Int
+        get() = prefs.getInt(KEY_BASS_BOOST, 0)
+        set(value) = prefs.edit().putInt(KEY_BASS_BOOST, value.coerceIn(0, 2)).apply()
+
+    /** Echeance de mise en veille automatique, ou 0 si aucune n'est posee. */
+    var sleepAt: Long
+        get() = prefs.getLong(KEY_SLEEP_AT, 0L)
+        set(value) = prefs.edit().putLong(KEY_SLEEP_AT, value).apply()
+
     /** Declenchement automatique avant l'alarme du telephone. */
     var alarmEnabled: Boolean
         get() = prefs.getBoolean(KEY_ALARM_ENABLED, false)
@@ -132,6 +142,8 @@ class Settings(context: Context) {
         private const val KEY_ALARM_ENABLED = "alarm_enabled"
         private const val KEY_ALARM_LEAD = "alarm_lead"
         private const val KEY_BALANCE = "balance"
+        private const val KEY_BASS_BOOST = "bass_boost"
+        private const val KEY_SLEEP_AT = "sleep_at"
         private const val KEY_PRIMARY_CHANNEL = "primary_channel"
         private const val KEY_SECONDARY_CHANNEL = "secondary_channel"
 

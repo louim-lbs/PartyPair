@@ -1,6 +1,7 @@
 package fr.boitedefete.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import fr.boitedefete.SleepTimer
 import fr.boitedefete.BuildConfig
 import fr.boitedefete.JblProtocol
 import fr.boitedefete.R
@@ -49,15 +51,19 @@ fun SettingsScreen(
     onChangeSpeakers: () -> Unit,
     onChangeMusicApp: () -> Unit,
     onSwapChannels: () -> Unit,
+    onSleepTimer: (Int?) -> Unit,
     onAlarmToggled: () -> Unit,
     onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
+    val context = LocalContext.current
 
     var volume by remember { mutableFloatStateOf(settings.wakeVolume.toFloat()) }
     var alarmOn by remember { mutableStateOf(settings.alarmEnabled) }
     var url by remember { mutableStateOf(settings.musicUrl) }
     var balance by remember { mutableFloatStateOf(settings.balance.toFloat()) }
+    var bass by remember { mutableStateOf(settings.bassBoost) }
+    var sleepLeft by remember { mutableStateOf(SleepTimer.remainingMinutes(context)) }
 
     Column(
         modifier = Modifier
@@ -104,6 +110,27 @@ fun SettingsScreen(
         )
 
         Spacer(Modifier.height(18.dp))
+        Text(stringResource(R.string.bass_boost), style = Body, color = Party.Silkscreen)
+        Spacer(Modifier.height(6.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            listOf(
+                R.string.bass_off to 0,
+                R.string.bass_deep to 1,
+                R.string.bass_punchy to 2
+            ).forEach { (labelRes, level) ->
+                Text(
+                    stringResource(labelRes).uppercase(),
+                    style = Silkscreen.copy(fontSize = 12.sp),
+                    color = if (bass == level) Party.Orange else Party.Muted,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { bass = level; settings.bassBoost = level }
+                        .padding(vertical = 12.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(18.dp))
         Text(
             balanceLabel(settings, balance.toInt()),
             style = Body,
@@ -138,6 +165,31 @@ fun SettingsScreen(
             style = Body.copy(fontSize = 13.sp),
             color = Party.Muted
         )
+
+        Section(stringResource(R.string.section_sleep))
+        Text(
+            sleepLeft?.let { stringResource(R.string.sleep_in, it) }
+                ?: stringResource(R.string.sleep_none),
+            style = Body,
+            color = if (sleepLeft != null) Party.Orange else Party.Silkscreen
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            SleepTimer.CHOICES.forEach { minutes ->
+                Text(
+                    stringResource(R.string.sleep_minutes, minutes),
+                    style = Silkscreen.copy(fontSize = 12.sp),
+                    color = Party.Orange,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onSleepTimer(minutes); sleepLeft = minutes }
+                        .padding(vertical = 12.dp)
+                )
+            }
+        }
+        if (sleepLeft != null) {
+            Entry(stringResource(R.string.sleep_cancel)) { onSleepTimer(null); sleepLeft = null }
+        }
 
         Section(stringResource(R.string.section_alarm))
         Row(

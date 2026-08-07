@@ -80,6 +80,10 @@ class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
+            ACTION_SLEEP -> {
+                Settings(context).sleepAt = 0L
+                PartyService.start(context, PartyService.ACTION_POWER_OFF)
+            }
             ACTION_WAKE -> {
                 PartyService.start(context, PartyService.ACTION_WAKE)
                 // Preparer la suivante des maintenant.
@@ -91,5 +95,6 @@ class AlarmReceiver : BroadcastReceiver() {
 
     companion object {
         const val ACTION_WAKE = "fr.boitedefete.action.ALARM_WAKE"
+        const val ACTION_SLEEP = "fr.boitedefete.action.ALARM_SLEEP"
     }
 }

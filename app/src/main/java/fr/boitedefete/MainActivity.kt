@@ -118,6 +118,10 @@ class MainActivity : ComponentActivity() {
                             onSwapChannels = {
                                 PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
                             },
+                            onSleepTimer = { minutes ->
+                                if (minutes == null) SleepTimer.cancel(this)
+                                else SleepTimer.schedule(this, minutes)
+                            },
                             onAlarmToggled = ::onAlarmToggled,
                             onBack = { screen = Screen.PARTY }
                         )
@@ -325,6 +329,16 @@ private fun PartyScreen(
                 color = if (state.step == Step.FAILED) Party.Orange else Party.Silkscreen,
                 textAlign = TextAlign.Center
             )
+
+            state.warning?.let { warning ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    warning,
+                    style = Body.copy(fontSize = 13.sp),
+                    color = Party.Orange,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             if (state.step == Step.READY) {
                 Spacer(Modifier.height(4.dp))

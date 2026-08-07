@@ -6,7 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.app.PendingIntent
 import android.os.IBinder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +37,7 @@ class PartyService : Service() {
         job = scope.launch(Dispatchers.IO) {
             val controller = PartyController(applicationContext)
             val report: (Step) -> Unit = { step ->
-                state.value = UiState(step)
+                state.value = UiState(step, warning = controller.warning)
                 if (step == Step.READY && action in PROMPTING_ACTIONS) musicPrompt.value = true
                 if (step == Step.IDLE) musicPrompt.value = false
                 notify(getString(step.label))
@@ -68,8 +68,12 @@ class PartyService : Service() {
                     else -> controller.run(report)
                 }
             } catch (e: Exception) {
-                state.value = UiState(Step.FAILED, e.message ?: getString(R.string.error_unknown))
+                val message = e.message ?: getString(R.string.error_unknown)
+                state.value = UiState(Step.FAILED, message)
                 PartyWidget.refresh(applicationContext)
+                // Declenchee par une alarme, un widget ou une routine, la
+                // sequence n'a aucun ecran ou se plaindre : on previent ici.
+                notifyFailure(message)
             } finally {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -83,24 +87,46 @@ class PartyService : Service() {
         super.onDestroy()
     }
 
+    /** Notification persistante decrivant l'echec, avec l'enceinte en cause. */
+    private fun notifyFailure(message: String) {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        ensureChannel(manager)
+        val open = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = Notification.Builder(this, CHANNEL_ID)
+            .setContentTitle(getString(R.string.failure_title))
+            .setContentText(message)
+            .setStyle(Notification.BigTextStyle().bigText(message))
+            .setSmallIcon(R.drawable.ic_driver)
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        runCatching { manager.notify(FAILURE_NOTIFICATION_ID, notification) }
+    }
+
     private fun notify(text: String) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, buildNotification(text))
     }
 
-    private fun buildNotification(text: String): Notification {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-                manager.createNotificationChannel(
-                    NotificationChannel(
-                        CHANNEL_ID,
-                        getString(R.string.channel_name),
-                        NotificationManager.IMPORTANCE_LOW
-                    )
+    private fun ensureChannel(manager: NotificationManager) {
+        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID,
+                    getString(R.string.channel_name),
+                    NotificationManager.IMPORTANCE_LOW
                 )
-            }
+            )
         }
+    }
+
+    private fun buildNotification(text: String): Notification {
+        ensureChannel(getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(text)
@@ -122,6 +148,7 @@ class PartyService : Service() {
 
         private const val CHANNEL_ID = "party"
         private const val NOTIFICATION_ID = 1
+        private const val FAILURE_NOTIFICATION_ID = 2
 
         /** Etat partage avec l'interface. */
         val state = MutableStateFlow(UiState(Step.IDLE))
@@ -156,4 +183,9 @@ class PartyService : Service() {
     }
 }
 
-data class UiState(val step: Step, val error: String? = null)
+data class UiState(
+    val step: Step,
+    val error: String? = null,
+    /** Precision affichee a cote de l'etat quand la sequence a abouti partiellement. */
+    val warning: String? = null
+)

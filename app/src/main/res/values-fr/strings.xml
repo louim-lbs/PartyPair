@@ -87,4 +87,15 @@
     <string name="balance_hint">Baisse l\'enceinte la plus proche plutôt que de monter l\'autre, pour ne jamais dépasser le niveau demandé.</string>
     <string name="widget_on">Enceintes allumées</string>
     <string name="widget_off">Lancer la fête</string>
+    <string name="bass_boost">Renforcement des graves</string>
+    <string name="bass_off">Arrêt</string>
+    <string name="bass_deep">Profond</string>
+    <string name="bass_punchy">Percutant</string>
+    <string name="section_sleep">Minuterie</string>
+    <string name="sleep_none">Aucune mise en veille programmée.</string>
+    <string name="sleep_in">Fondu et extinction dans %1$d min.</string>
+    <string name="sleep_minutes">%1$d min</string>
+    <string name="sleep_cancel">Annuler la minuterie</string>
+    <string name="warning_alone">%1$s n\'a pas répondu — lecture sur %2$s seule.</string>
+    <string name="failure_title">Les enceintes n\'ont pas démarré</string>
 </resources>

@@ -32,6 +32,7 @@ object JblProtocol {
     private const val CMD_SET_DEV_INFO = 0x13.toByte()
     private const val CMD_REQ_PLAYER_INFO = 0x41.toByte()
     private const val CMD_SET_PLAYER_INFO = 0x43.toByte()
+    private const val CMD_SET_BASS_BOOST = 0x63.toByte()
     private const val CMD_SET_PHONE_MAC = 0x84.toByte()
 
     /** Reponses attendues. */
@@ -87,6 +88,15 @@ object JblProtocol {
         CMD_SET_DEV_INFO,
         byteArrayOf(0x00, TAG_CHANNEL.toByte(), 0x01, channel)
     )
+
+    /**
+     * Renforcement des graves.
+     *
+     * L'application officielle expose trois etats, transmis par leur rang :
+     * arret, puis deux intensites.
+     */
+    fun setBassBoost(level: Int): ByteArray =
+        frame(CMD_SET_BASS_BOOST, byteArrayOf(level.coerceIn(0, 2).toByte()))
 
     /** Regle le volume general, de 0 a [MAX_VOLUME]. */
     fun setVolume(level: Int): ByteArray = frame(
