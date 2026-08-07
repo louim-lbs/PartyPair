@@ -84,6 +84,12 @@ class SpeakerLink private constructor(
         return raw.firstOrNull()?.toInt()?.and(0xFF)
     }
 
+    /** Canal attribue a cette enceinte, ou null s'il n'est pas communique. */
+    suspend fun readChannel(): Byte? {
+        val answer = query(JblProtocol.REQ_DEVICE_INFO, JblProtocol.RESP_DEV_INFO) ?: return null
+        return JblProtocol.parseFields(answer)[JblProtocol.TAG_CHANNEL]?.firstOrNull()
+    }
+
     /** Vrai si la paire stereo est deja etablie. */
     suspend fun isStereoLinked(): Boolean {
         val answer = query(JblProtocol.REQ_DEVICE_INFO, JblProtocol.RESP_DEV_INFO) ?: return false

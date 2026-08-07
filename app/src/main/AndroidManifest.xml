@@ -66,6 +66,7 @@
                 <action android:name="fr.boitedefete.action.START" />
                 <action android:name="fr.boitedefete.action.UNLINK" />
                 <action android:name="fr.boitedefete.action.POWER_OFF" />
+                <action android:name="fr.boitedefete.action.TOGGLE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -118,6 +119,18 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
+        </receiver>
+
+        <!-- Bouton d'ecran d'accueil. -->
+        <receiver
+            android:name=".PartyWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/party_widget_info" />
         </receiver>
 
         <!-- Raccourci dans le volet des reglages rapides. -->

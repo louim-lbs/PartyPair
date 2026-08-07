@@ -49,7 +49,8 @@ class TriggerActivity : Activity() {
         val KNOWN_ACTIONS = setOf(
             PartyService.ACTION_START,
             PartyService.ACTION_UNLINK,
-            PartyService.ACTION_POWER_OFF
+            PartyService.ACTION_POWER_OFF,
+            PartyService.ACTION_TOGGLE
         )
     }
 }

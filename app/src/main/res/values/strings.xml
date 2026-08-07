@@ -84,4 +84,12 @@
     <string name="countdown_stay">Stay here</string>
     <string name="error_speaker_unreachable">%1$s did not answer. Check it is plugged in and within range, and that the JBL app is closed.</string>
     <string name="mac_incomplete">A Bluetooth address has six pairs, for example AA:BB:CC:DD:EE:FF.</string>
+    <string name="swap_channels">Swap left and right</string>
+    <string name="channels_known">%1$s on the left, %2$s on the right</string>
+    <string name="channels_unknown">Channels unknown — run the pairing once to read them.</string>
+    <string name="balance_even">Balance: even</string>
+    <string name="balance_towards">Balance: louder on %1$s</string>
+    <string name="balance_hint">Lowers the nearer speaker rather than raising the other, so the level you asked for is never exceeded.</string>
+    <string name="widget_on">Speakers on</string>
+    <string name="widget_off">Start the party</string>
 </resources>

@@ -76,6 +76,7 @@ class PartyController(private val context: Context) {
                     delay(Config.LINK_SETTLE_MS)
                 }
 
+                rememberChannels(primary, secondary)
                 applyVolume(primary)
 
                 if (phoneMac.isNotBlank()) {
@@ -92,6 +93,31 @@ class PartyController(private val context: Context) {
         } finally {
             secondary.close()
         }
+    }
+
+    /**
+     * Decide seule entre appairer et eteindre, en verifiant l'etat reel.
+     *
+     * L'affichage peut croire les enceintes pretes alors que la paire a ete
+     * rompue entre-temps, par l'application JBL ou parce qu'une enceinte a ete
+     * debranchee. Se fier a cette memoire ferait eteindre au lieu d'apparier.
+     */
+    suspend fun toggle(onStep: (Step) -> Unit) {
+        val primaryDevice = settings.primary
+            ?: throw SpeakerException(context.getString(R.string.error_not_configured))
+        val adapter = adapter()
+
+        val linked = runCatching {
+            val link = connect(adapter, primaryDevice)
+            try {
+                link.awaitReady(Config.READY_TIMEOUT_MS)
+                link.isStereoLinked()
+            } finally {
+                link.close()
+            }
+        }.getOrDefault(false)
+
+        if (linked) powerOff(onStep) else run(onStep)
     }
 
     /**
@@ -150,7 +176,13 @@ class PartyController(private val context: Context) {
         }
     }
 
-    /** Applique le volume de reveil, ou restitue celui d'avant la mise en veille. */
+    /**
+     * Applique le volume de reveil, puis l'equilibre entre les deux enceintes.
+     *
+     * Le protocole permet de regler chaque enceinte separement : on abaisse
+     * celle du cote le plus proche plutot que de monter l'autre, pour ne jamais
+     * depasser le niveau demande.
+     */
     private suspend fun applyVolume(primary: SpeakerLink) {
         val wanted = when {
             settings.wakeVolume >= 0 -> settings.wakeVolume
@@ -159,6 +191,61 @@ class PartyController(private val context: Context) {
         }
         primary.write(JblProtocol.setVolume(wanted))
         delay(200)
+
+        val balance = settings.balance
+        if (balance != 0) {
+            val primaryLevel = wanted - maxOf(0, balance)
+            val secondaryLevel = wanted - maxOf(0, -balance)
+            primary.write(JblProtocol.setPrimaryVolume(primaryLevel))
+            delay(120)
+            primary.write(JblProtocol.setSecondaryVolume(secondaryLevel))
+            delay(120)
+        }
+    }
+
+    /** Releve le canal de chaque enceinte pour pouvoir l'afficher plus tard. */
+    private suspend fun rememberChannels(primary: SpeakerLink, secondary: SpeakerLink) {
+        primary.readChannel()?.let { settings.primaryChannel = it.toInt() and 0xFF }
+        secondary.readChannel()?.let { settings.secondaryChannel = it.toInt() and 0xFF }
+    }
+
+    /**
+     * Echange les canaux gauche et droite des deux enceintes.
+     * Utile quand la paire a ete montee a l'envers de leur disposition reelle.
+     */
+    suspend fun swapChannels() {
+        val primaryDevice = settings.primary
+        val secondaryDevice = settings.secondary
+        if (primaryDevice == null || secondaryDevice == null) {
+            throw SpeakerException(context.getString(R.string.error_not_configured))
+        }
+        val adapter = adapter()
+
+        val primaryTarget = if (settings.primaryChannel == 1) {
+            JblProtocol.CHANNEL_RIGHT
+        } else {
+            JblProtocol.CHANNEL_LEFT
+        }
+        val secondaryTarget = if (primaryTarget == JblProtocol.CHANNEL_LEFT) {
+            JblProtocol.CHANNEL_RIGHT
+        } else {
+            JblProtocol.CHANNEL_LEFT
+        }
+
+        listOf(primaryDevice to primaryTarget, secondaryDevice to secondaryTarget)
+            .forEach { (device, channel) ->
+                val link = connect(adapter, device)
+                try {
+                    link.awaitReady(Config.READY_TIMEOUT_MS)
+                    link.write(JblProtocol.setChannel(channel))
+                    delay(Config.INTER_WRITE_DELAY_MS)
+                } finally {
+                    link.close()
+                }
+            }
+
+        settings.primaryChannel = primaryTarget.toInt()
+        settings.secondaryChannel = secondaryTarget.toInt()
     }
 
     /**

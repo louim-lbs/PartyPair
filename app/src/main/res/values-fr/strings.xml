@@ -79,4 +79,12 @@
     <string name="countdown_stay">Rester ici</string>
     <string name="error_speaker_unreachable">%1$s n\'a pas répondu. Vérifiez qu\'elle est branchée et à portée, et que l\'application JBL est fermée.</string>
     <string name="mac_incomplete">Une adresse Bluetooth compte six paires, par exemple AA:BB:CC:DD:EE:FF.</string>
+    <string name="swap_channels">Échanger gauche et droite</string>
+    <string name="channels_known">%1$s à gauche, %2$s à droite</string>
+    <string name="channels_unknown">Canaux inconnus — lancez l\'appairage une fois pour les relever.</string>
+    <string name="balance_even">Équilibre : centré</string>
+    <string name="balance_towards">Équilibre : plus fort sur %1$s</string>
+    <string name="balance_hint">Baisse l\'enceinte la plus proche plutôt que de monter l\'autre, pour ne jamais dépasser le niveau demandé.</string>
+    <string name="widget_on">Enceintes allumées</string>
+    <string name="widget_off">Lancer la fête</string>
 </resources>

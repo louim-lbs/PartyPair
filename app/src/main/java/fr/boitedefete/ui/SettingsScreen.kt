@@ -48,6 +48,7 @@ fun SettingsScreen(
     onOpenUrl: (String) -> Unit,
     onChangeSpeakers: () -> Unit,
     onChangeMusicApp: () -> Unit,
+    onSwapChannels: () -> Unit,
     onAlarmToggled: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -56,6 +57,7 @@ fun SettingsScreen(
     var volume by remember { mutableFloatStateOf(settings.wakeVolume.toFloat()) }
     var alarmOn by remember { mutableStateOf(settings.alarmEnabled) }
     var url by remember { mutableStateOf(settings.musicUrl) }
+    var balance by remember { mutableFloatStateOf(settings.balance.toFloat()) }
 
     Column(
         modifier = Modifier
@@ -74,6 +76,14 @@ fun SettingsScreen(
         Entry(stringResource(R.string.change_speakers), onClick = onChangeSpeakers)
         Entry(stringResource(R.string.change_music_app), onClick = onChangeMusicApp)
 
+        Spacer(Modifier.height(4.dp))
+        Text(
+            channelSummary(settings),
+            style = Body.copy(fontSize = 14.sp),
+            color = Party.Muted
+        )
+        Entry(stringResource(R.string.swap_channels), onClick = onSwapChannels)
+
         Section(stringResource(R.string.section_playback))
         Text(
             stringResource(R.string.wake_volume, volume.toInt()),
@@ -89,6 +99,25 @@ fun SettingsScreen(
         )
         Text(
             stringResource(R.string.wake_volume_hint),
+            style = Body.copy(fontSize = 13.sp),
+            color = Party.Muted
+        )
+
+        Spacer(Modifier.height(18.dp))
+        Text(
+            balanceLabel(settings, balance.toInt()),
+            style = Body,
+            color = Party.Silkscreen
+        )
+        Slider(
+            value = balance,
+            onValueChange = { balance = it },
+            onValueChangeFinished = { settings.balance = balance.toInt() },
+            valueRange = -Settings.MAX_BALANCE.toFloat()..Settings.MAX_BALANCE.toFloat(),
+            steps = Settings.MAX_BALANCE * 2 - 1
+        )
+        Text(
+            stringResource(R.string.balance_hint),
             style = Body.copy(fontSize = 13.sp),
             color = Party.Muted
         )
@@ -171,6 +200,32 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+/** « Cécile à gauche, Hildegarde à droite », si les canaux sont connus. */
+@Composable
+private fun channelSummary(settings: Settings): String {
+    val primary = settings.primary?.name ?: return stringResource(R.string.channels_unknown)
+    val secondary = settings.secondary?.name ?: return stringResource(R.string.channels_unknown)
+    return when (settings.primaryChannel) {
+        1 -> stringResource(R.string.channels_known, primary, secondary)
+        2 -> stringResource(R.string.channels_known, secondary, primary)
+        else -> stringResource(R.string.channels_unknown)
+    }
+}
+
+/** « Plus fort sur Hildegarde » ou « Équilibré ». */
+@Composable
+private fun balanceLabel(settings: Settings, value: Int): String = when {
+    value == 0 -> stringResource(R.string.balance_even)
+    value > 0 -> stringResource(
+        R.string.balance_towards,
+        settings.secondary?.name.orEmpty()
+    )
+    else -> stringResource(
+        R.string.balance_towards,
+        settings.primary?.name.orEmpty()
+    )
 }
 
 @Composable

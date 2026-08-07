@@ -39,6 +39,7 @@ object JblProtocol {
     const val RESP_PLAYER_INFO = 0x42.toByte()
 
     // Tags TLV
+    const val TAG_CHANNEL = 0x35
     const val TAG_PARTY_CONNECT = 0x39
     const val TAG_VOLUME = 0x42
     private const val TAG_VOLUME_PRIMARY = 0x46
@@ -74,6 +75,17 @@ object JblProtocol {
     val TWS_UNLINK: ByteArray = frame(
         CMD_SET_DEV_INFO,
         byteArrayOf(0x00, TAG_PARTY_CONNECT.toByte(), 0x01, PARTY_OFF)
+    )
+
+    /** Canaux d'une paire stereo. */
+    const val CHANNEL_NONE = 0x00.toByte()
+    const val CHANNEL_LEFT = 0x01.toByte()
+    const val CHANNEL_RIGHT = 0x02.toByte()
+
+    /** Attribue un canal a une enceinte. */
+    fun setChannel(channel: Byte): ByteArray = frame(
+        CMD_SET_DEV_INFO,
+        byteArrayOf(0x00, TAG_CHANNEL.toByte(), 0x01, channel)
     )
 
     /** Regle le volume general, de 0 a [MAX_VOLUME]. */

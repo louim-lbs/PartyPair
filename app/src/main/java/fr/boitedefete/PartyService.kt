@@ -38,10 +38,19 @@ class PartyService : Service() {
             val controller = PartyController(applicationContext)
             val report: (Step) -> Unit = { step ->
                 state.value = UiState(step)
+                if (step == Step.READY && action in PROMPTING_ACTIONS) musicPrompt.value = true
+                if (step == Step.IDLE) musicPrompt.value = false
                 notify(getString(step.label))
+                PartyWidget.refresh(applicationContext)
             }
             try {
                 when (action) {
+                    ACTION_TOGGLE -> controller.toggle(report)
+                    ACTION_SWAP_CHANNELS -> {
+                        report(Step.LINKING)
+                        controller.swapChannels()
+                        report(Step.READY)
+                    }
                     ACTION_WAKE -> {
                         // Declenche par l'alarme : aucune fenetre ne peut s'ouvrir,
                         // on lance donc la musique directement.
@@ -60,6 +69,7 @@ class PartyService : Service() {
                 }
             } catch (e: Exception) {
                 state.value = UiState(Step.FAILED, e.message ?: getString(R.string.error_unknown))
+                PartyWidget.refresh(applicationContext)
             } finally {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -104,12 +114,24 @@ class PartyService : Service() {
         const val ACTION_UNLINK = "fr.boitedefete.action.UNLINK"
         const val ACTION_POWER_OFF = "fr.boitedefete.action.POWER_OFF"
         const val ACTION_WAKE = "fr.boitedefete.action.WAKE"
+        const val ACTION_TOGGLE = "fr.boitedefete.action.TOGGLE"
+        const val ACTION_SWAP_CHANNELS = "fr.boitedefete.action.SWAP_CHANNELS"
+
+        /** Actions issues d'un geste de l'utilisateur, qui meritent la proposition. */
+        private val PROMPTING_ACTIONS = setOf(ACTION_START, ACTION_TOGGLE)
 
         private const val CHANNEL_ID = "party"
         private const val NOTIFICATION_ID = 1
 
         /** Etat partage avec l'interface. */
         val state = MutableStateFlow(UiState(Step.IDLE))
+
+        /**
+         * Vrai quand une sequence vient d'aboutir et que la musique n'a pas
+         * encore ete proposee. Vit ici plutot que dans l'ecran, sans quoi un
+         * aller-retour dans les reglages relancerait le decompte.
+         */
+        val musicPrompt = MutableStateFlow(false)
 
         /**
          * Remet l'affichage en phase avec la realite.
@@ -121,13 +143,15 @@ class PartyService : Service() {
             if (state.value.step != Step.IDLE) return
             val on = runCatching { PartyController(context).isAlreadyOn() }.getOrDefault(false)
             if (on && state.value.step == Step.IDLE) {
+                // Etat retrouve, non provoque : pas de proposition musicale.
                 state.value = UiState(Step.READY)
+                PartyWidget.refresh(context)
             }
         }
 
-        fun start(context: Context, action: String = ACTION_START) {
+        fun start(context: Context, action: String = ACTION_TOGGLE) {
             val intent = Intent(context, PartyService::class.java).setAction(action)
-            context.startForegroundService(intent)
+            runCatching { context.startForegroundService(intent) }
         }
     }
 }

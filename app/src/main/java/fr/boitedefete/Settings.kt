@@ -64,6 +64,24 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_LAST_VOLUME, -1)
         set(value) = prefs.edit().putInt(KEY_LAST_VOLUME, value).apply()
 
+    /**
+     * Equilibre entre les deux enceintes, de -8 (tout sur la principale) a +8
+     * (tout sur la secondaire). Zero laisse les deux au meme niveau.
+     */
+    var balance: Int
+        get() = prefs.getInt(KEY_BALANCE, 0)
+        set(value) = prefs.edit().putInt(KEY_BALANCE, value.coerceIn(-MAX_BALANCE, MAX_BALANCE)).apply()
+
+    /** Canal releve sur l'enceinte principale : 1 gauche, 2 droite, 0 inconnu. */
+    var primaryChannel: Int
+        get() = prefs.getInt(KEY_PRIMARY_CHANNEL, 0)
+        set(value) = prefs.edit().putInt(KEY_PRIMARY_CHANNEL, value).apply()
+
+    /** Canal releve sur l'enceinte secondaire. */
+    var secondaryChannel: Int
+        get() = prefs.getInt(KEY_SECONDARY_CHANNEL, 0)
+        set(value) = prefs.edit().putInt(KEY_SECONDARY_CHANNEL, value).apply()
+
     /** Declenchement automatique avant l'alarme du telephone. */
     var alarmEnabled: Boolean
         get() = prefs.getBoolean(KEY_ALARM_ENABLED, false)
@@ -113,6 +131,12 @@ class Settings(context: Context) {
         private const val KEY_LAST_VOLUME = "last_volume"
         private const val KEY_ALARM_ENABLED = "alarm_enabled"
         private const val KEY_ALARM_LEAD = "alarm_lead"
+        private const val KEY_BALANCE = "balance"
+        private const val KEY_PRIMARY_CHANNEL = "primary_channel"
+        private const val KEY_SECONDARY_CHANNEL = "secondary_channel"
+
+        /** Ecart maximal entre les deux enceintes, sur l'echelle 0-32. */
+        const val MAX_BALANCE = 8
 
         /** Un tiers du maximum : audible sans faire sursauter. */
         const val DEFAULT_WAKE_VOLUME = 10

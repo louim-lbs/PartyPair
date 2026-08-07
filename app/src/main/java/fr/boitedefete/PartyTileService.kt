@@ -20,11 +20,8 @@ class PartyTileService : TileService() {
     override fun onClick() {
         super.onClick()
         if (!Settings(this).isConfigured) return
-        val ready = PartyService.state.value.step == Step.READY
-        PartyService.start(
-            this,
-            if (ready) PartyService.ACTION_POWER_OFF else PartyService.ACTION_START
-        )
+        // La bascule verifie l'etat reel des enceintes : rien a decider ici.
+        PartyService.start(this, PartyService.ACTION_TOGGLE)
         refresh()
     }
 

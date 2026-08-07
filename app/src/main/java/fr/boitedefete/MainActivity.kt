@@ -115,6 +115,9 @@ class MainActivity : ComponentActivity() {
                             onOpenUrl = ::openUrl,
                             onChangeSpeakers = { screen = Screen.SETUP },
                             onChangeMusicApp = { screen = Screen.MUSIC_PICKER },
+                            onSwapChannels = {
+                                PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
+                            },
                             onAlarmToggled = ::onAlarmToggled,
                             onBack = { screen = Screen.PARTY }
                         )
@@ -143,14 +146,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Un appui reveille et apparie ; le suivant remet les enceintes en veille. */
-    private fun togglePower() {
-        val ready = PartyService.state.value.step == Step.READY
-        PartyService.start(
-            this,
-            if (ready) PartyService.ACTION_POWER_OFF else PartyService.ACTION_START
-        )
-    }
+    /**
+     * Un appui reveille et apparie ; le suivant met en veille.
+     * La decision revient au controleur, qui verifie l'etat reel des enceintes.
+     */
+    private fun togglePower() = PartyService.start(this, PartyService.ACTION_TOGGLE)
 
     /**
      * Programmer une alarme exacte demande une autorisation explicite depuis
@@ -195,6 +195,23 @@ class MainActivity : ComponentActivity() {
     private fun askPermission() = requestPermissions.launch(neededPermissions())
 }
 
+/** « Cécile (G) · Hildegarde (D) », ou les seuls noms si le canal est inconnu. */
+private fun speakerSummary(settings: Settings): String {
+    fun label(name: String?, channel: Int): String? {
+        if (name == null) return null
+        val side = when (channel) {
+            1 -> "G"
+            2 -> "D"
+            else -> return name
+        }
+        return "$name ($side)"
+    }
+    return listOfNotNull(
+        label(settings.primary?.name, settings.primaryChannel),
+        label(settings.secondary?.name, settings.secondaryChannel)
+    ).joinToString(" · ")
+}
+
 @Composable
 private fun PermissionScreen(onRetry: () -> Unit) {
     Column(
@@ -231,19 +248,10 @@ private fun PartyScreen(
     val state by PartyService.state.collectAsState()
     val context = LocalContext.current
 
-    var countdownShown by remember { mutableStateOf(false) }
-    var countdownDone by remember { mutableStateOf(false) }
-
-    // Le decompte n'a de sens que si l'ecran est visible : declenchee par une
-    // routine, la sequence ouvre la musique directement.
-    LaunchedEffect(state.step) {
-        if (state.step == Step.READY && musicApp != null && !countdownDone) {
-            countdownShown = true
-        }
-        if (state.step == Step.IDLE) {
-            countdownDone = false
-        }
-    }
+    // La proposition vit dans le service, pas dans cet ecran : un aller-retour
+    // dans les reglages detruirait l'etat local et relancerait le decompte.
+    val promptPending by PartyService.musicPrompt.collectAsState()
+    val showCountdown = promptPending && musicApp != null
 
     val progress = when (state.step) {
         Step.IDLE, Step.FAILED -> 0f
@@ -262,18 +270,14 @@ private fun PartyScreen(
         1f
     ) == 0f
 
-    if (countdownShown) {
+    if (showCountdown) {
         CountdownDialog(
             seconds = Config.MUSIC_COUNTDOWN_SECONDS,
             onOpenNow = {
-                countdownShown = false
-                countdownDone = true
+                PartyService.musicPrompt.value = false
                 onOpenMusic()
             },
-            onDismiss = {
-                countdownShown = false
-                countdownDone = true
-            }
+            onDismiss = { PartyService.musicPrompt.value = false }
         )
     }
 
@@ -352,8 +356,7 @@ private fun PartyScreen(
 
             Spacer(Modifier.height(14.dp))
             Text(
-                text = listOfNotNull(settings.primary?.name, settings.secondary?.name)
-                    .joinToString(" · "),
+                text = speakerSummary(settings),
                 style = Body.copy(fontSize = 13.sp),
                 color = Party.Muted
             )
