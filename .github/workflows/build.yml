@@ -29,14 +29,31 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Vérifier l'environnement
-        run: |
-          echo "java  : $(java -version 2>&1 | head -1)"
-          echo "gradle: $(gradle --version | grep Gradle | head -1)"
-          echo "sdk   : $ANDROID_HOME"
-
       - name: Compilation
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon 2>&1 | tee build.log
+
+      # Les erreurs Kotlin sont noyees dans un journal de plusieurs centaines de
+      # lignes. On les recopie ici : cette page est la premiere que l'on consulte.
+      - name: Erreurs de compilation
+        if: failure()
+        run: |
+          {
+            echo "## Erreurs de compilation"
+            echo ""
+            echo '```'
+            grep -E "^e: |error:" build.log | head -40 || true
+            echo '```'
+            echo ""
+            echo "<details><summary>40 dernieres lignes du journal</summary>"
+            echo ""
+            echo '```'
+            tail -40 build.log
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Renommer l'APK
         run: |
@@ -49,7 +66,7 @@ jobs:
           name: party-pair-apk
           path: out/party-pair.apk
 
-      - name: Créer la release sur tag
+      - name: Creer la release sur tag
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
