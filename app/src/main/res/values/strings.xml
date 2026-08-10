@@ -142,4 +142,5 @@
     <string name="section_notifications">Notifications</string>
     <string name="notifications_blocked">Notifications are turned off, so the sleep timer countdown and failure alerts cannot appear.</string>
     <string name="notifications_open">Open notification settings</string>
+    <string name="update_no_release">No version has been published yet.</string>
 </resources>

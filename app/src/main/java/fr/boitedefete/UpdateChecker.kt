@@ -58,7 +58,12 @@ object UpdateChecker {
         /** Le depot repond, rien de nouveau. */
         data object UpToDate : Outcome
         /**
-         * Le depot n'a pas repondu, ou ne publie aucune version.
+         * Le depot repond mais ne publie aucune version.
+         * Cas normal tant que rien n'a ete publie : ce n'est pas une panne.
+         */
+        data object NoRelease : Outcome
+        /**
+         * Le depot n'a pas repondu.
          * Distinguer ce cas evite d'annoncer « a jour » alors qu'on ne sait rien.
          */
         data object Unreachable : Outcome
@@ -70,11 +75,44 @@ object UpdateChecker {
      */
     suspend fun checkNow(context: Context): Outcome {
         Settings(context).lastUpdateCheck = System.currentTimeMillis()
-        val release = withContext(Dispatchers.IO) { fetchLatest() } ?: return Outcome.Unreachable
+        val fetched = withContext(Dispatchers.IO) { fetchLatestOrStatus() }
+        val release = fetched.getOrNull()
+            ?: return if (fetched.exceptionOrNull() is NoReleaseException) {
+                Outcome.NoRelease
+            } else {
+                Outcome.Unreachable
+            }
         return if (isNewer(release.version, BuildConfig.VERSION_NAME)) {
             Outcome.Available(release)
         } else {
             Outcome.UpToDate
+        }
+    }
+
+    /** Le depot ne publie encore aucune version. */
+    private class NoReleaseException : Exception()
+
+    /**
+     * Comme [fetchLatest], mais distingue l'absence de publication d'une panne :
+     * l'API repond 404 tant qu'aucune version n'existe.
+     */
+    private fun fetchLatestOrStatus(): Result<Release> = runCatching {
+        val connection = (URL(RELEASES_API).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 8_000
+            readTimeout = 8_000
+            setRequestProperty("Accept", "application/vnd.github+json")
+        }
+        try {
+            if (connection.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                throw NoReleaseException()
+            }
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                throw IllegalStateException("HTTP ${connection.responseCode}")
+            }
+            parse(connection.inputStream.bufferedReader().use { it.readText() })
+                ?: throw NoReleaseException()
+        } finally {
+            connection.disconnect()
         }
     }
 
@@ -109,35 +147,27 @@ object UpdateChecker {
             }.getOrDefault(false)
         }
 
-    private fun fetchLatest(): Release? = runCatching {
-        val connection = (URL(RELEASES_API).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            setRequestProperty("Accept", "application/vnd.github+json")
-        }
-        try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            val json = JSONObject(body)
-            val version = json.optString("tag_name").trimStart('v', 'V')
-            if (version.isBlank()) return null
+    private fun fetchLatest(): Release? = fetchLatestOrStatus().getOrNull()
 
-            val assets = json.optJSONArray("assets")
-            var apkUrl: String? = null
-            if (assets != null) {
-                for (i in 0 until assets.length()) {
-                    val asset = assets.optJSONObject(i) ?: continue
-                    if (asset.optString("name").endsWith(".apk", ignoreCase = true)) {
-                        apkUrl = asset.optString("browser_download_url").takeIf { it.isNotBlank() }
-                        break
-                    }
+    /** Extrait la version et l'adresse de l'APK d'une reponse de l'API. */
+    private fun parse(body: String): Release? {
+        val json = JSONObject(body)
+        val version = json.optString("tag_name").trimStart('v', 'V')
+        if (version.isBlank()) return null
+
+        val assets = json.optJSONArray("assets")
+        var apkUrl: String? = null
+        if (assets != null) {
+            for (i in 0 until assets.length()) {
+                val asset = assets.optJSONObject(i) ?: continue
+                if (asset.optString("name").endsWith(".apk", ignoreCase = true)) {
+                    apkUrl = asset.optString("browser_download_url").takeIf { it.isNotBlank() }
+                    break
                 }
             }
-            Release(version, apkUrl)
-        } finally {
-            connection.disconnect()
         }
-    }.getOrNull()
+        return Release(version, apkUrl)
+    }
 
     /** Compare deux numeros de version composante par composante : 1.10 suit bien 1.9. */
     internal fun isNewer(candidate: String, current: String): Boolean {

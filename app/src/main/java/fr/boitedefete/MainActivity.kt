@@ -178,6 +178,7 @@ class MainActivity : ComponentActivity() {
                             settings = settings,
                             musicApp = musicApp,
                             onPress = ::togglePower,
+                            onStandby = ::standby,
                             onOpenMusic = ::playMusic,
                             onPickMusic = { screen = Screen.MUSIC_PICKER },
                             onSettings = { screen = Screen.SETTINGS },
@@ -199,6 +200,17 @@ class MainActivity : ComponentActivity() {
      */
     private fun togglePower() {
         PartyService.start(this, PartyService.ACTION_TOGGLE)
+    }
+
+    /**
+     * Mise en veille demandee sans ambiguite.
+     *
+     * On saute la verification de l'etat de la paire : l'utilisateur vient de
+     * confirmer, inutile de lui faire attendre une interrogation Bluetooth
+     * avant que le fondu ne commence.
+     */
+    private fun standby() {
+        PartyService.start(this, PartyService.ACTION_POWER_OFF)
     }
 
     /**
@@ -229,6 +241,9 @@ class MainActivity : ComponentActivity() {
                     report(UpdateStatus(getString(R.string.update_none)))
 
                 // Rien a proposer : on l'ecrit, sans emmener l'utilisateur ailleurs.
+                UpdateChecker.Outcome.NoRelease ->
+                    report(UpdateStatus(getString(R.string.update_no_release)))
+
                 UpdateChecker.Outcome.Unreachable ->
                     report(UpdateStatus(getString(R.string.update_failed)))
 
@@ -438,6 +453,7 @@ private fun PartyScreen(
     settings: Settings,
     musicApp: String?,
     onPress: () -> Unit,
+    onStandby: () -> Unit,
     onOpenMusic: () -> Unit,
     onPickMusic: () -> Unit,
     onSettings: () -> Unit,
@@ -490,7 +506,7 @@ private fun PartyScreen(
             onConfirm = { dontAskAgain ->
                 if (dontAskAgain) settings.confirmStandby = false
                 standbyDialog = false
-                onPress()
+                onStandby()
             },
             onDismiss = { standbyDialog = false }
         )
@@ -552,11 +568,11 @@ private fun PartyScreen(
                 active = running,
                 reducedMotion = reducedMotion,
                 onClick = {
-                    // Un appui accidentel ne doit pas couper la musique en cours.
-                    if (state.step == Step.READY && settings.confirmStandby) {
-                        standbyDialog = true
-                    } else {
-                        onPress()
+                    when {
+                        // Un appui accidentel ne doit pas couper la musique en cours.
+                        state.step == Step.READY && settings.confirmStandby -> standbyDialog = true
+                        state.step == Step.READY -> onStandby()
+                        else -> onPress()
                     }
                 }
             )

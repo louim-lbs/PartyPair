@@ -137,4 +137,5 @@
     <string name="section_notifications">Notifications</string>
     <string name="notifications_blocked">Les notifications sont désactivées : le décompte de la minuterie et les alertes d\'échec ne peuvent pas s\'afficher.</string>
     <string name="notifications_open">Ouvrir les réglages de notification</string>
+    <string name="update_no_release">Aucune version n\'a encore été publiée.</string>
 </resources>

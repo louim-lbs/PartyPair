@@ -68,33 +68,26 @@ fun SetupScreen(
             .background(Party.Cabinet)
             .padding(horizontal = 28.dp, vertical = 40.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // Le bouton d'abandon occupe sa propre ligne : cote a cote, il rognait
+        // le titre, dont les capitales espacees prennent toute la largeur.
+        onCancel?.let { cancel ->
             Text(
-                stringResource(R.string.setup_title).uppercase(),
-                style = Display.copy(fontSize = 22.sp),
-                color = Party.Silkscreen,
+                stringResource(R.string.cancel).uppercase(),
+                style = Silkscreen.copy(fontSize = 13.sp),
+                color = Party.Muted,
                 maxLines = 1,
-                modifier = Modifier.weight(1f, fill = false)
+                modifier = Modifier
+                    .clickable(onClick = cancel)
+                    .padding(vertical = 8.dp, horizontal = 2.dp)
             )
-            onCancel?.let { cancel ->
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    stringResource(R.string.cancel).uppercase(),
-                    style = Silkscreen.copy(fontSize = 13.sp),
-                    color = Party.Muted,
-                    // Le titre cede la place plutot que d'ecraser le bouton.
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier
-                        .clickable(onClick = cancel)
-                        .padding(horizontal = 4.dp, vertical = 6.dp)
-                )
-            }
+            Spacer(Modifier.height(10.dp))
         }
+
+        Text(
+            stringResource(R.string.setup_title).uppercase(),
+            style = Display.copy(fontSize = 22.sp),
+            color = Party.Silkscreen
+        )
         Spacer(Modifier.height(24.dp))
 
         when {
