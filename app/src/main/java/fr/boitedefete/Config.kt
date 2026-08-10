@@ -29,6 +29,9 @@ object Config {
     /** Tentatives de connexion avant d'abandonner. */
     const val CONNECT_ATTEMPTS = 2
 
+    /** Delai maximal pour relever le volume avant le fondu. */
+    const val VOLUME_READ_MS = 1_500L
+
     /** Paliers du fondu sonore avant la mise en veille. */
     const val FADE_STEPS = 12
     const val FADE_STEP_MS = 180L

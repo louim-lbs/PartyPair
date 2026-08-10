@@ -111,20 +111,21 @@ Dans *Paramètres → Modes et routines → Routines → +*, choisissez votre d�
 
 **Réglages rapides** — une tuile est disponible dans le volet des notifications, à ajouter depuis le bouton d'édition. Elle reprend la bascule du bouton principal.
 
-**Home Assistant** — l'application compagnon Android envoie une diffusion, que l'application reçoit sans rien afficher :
+**Home Assistant** — utilisez `command_activity` :
 
 ```yaml
 action: notify.mobile_app_votre_telephone
 data:
-  message: command_broadcast_intent
+  message: command_activity
   data:
     intent_package_name: fr.boitedefete
+    intent_class_name: fr.boitedefete.TriggerActivity
     intent_action: fr.boitedefete.action.POWER_OFF
 ```
 
 Actions disponibles : `START` pour réveiller et apparier, `POWER_OFF` pour la mise en veille avec fondu, `TOGGLE` pour basculer selon l'état réel, `UNLINK` pour rompre la paire sans éteindre.
 
-Préférez `command_broadcast_intent` à `command_activity` : ce dernier réclame l'autorisation « Superposition à d'autres applications » et fait brièvement basculer l'écran.
+Au premier envoi, l'application compagnon demandera l'autorisation « Superposition à d'autres applications ». Elle est nécessaire : depuis Android 12, une application en arrière-plan ne peut pas lancer de service, et c'est cette autorisation qui lève la restriction. `command_broadcast_intent` fonctionne aussi lorsque l'application a été ouverte récemment, mais échoue silencieusement le reste du temps.
 
 Le téléphone doit être à portée des enceintes, puisque c'est lui qui leur parle. Pour une routine déclenchée en partant de chez vous, prévoyez que la commande arrive pendant que le téléphone est encore là.
 

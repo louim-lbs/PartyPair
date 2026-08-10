@@ -165,17 +165,30 @@ class PartyController(private val context: Context) {
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val adapter = adapter()
 
+        val link = runCatching { connect(adapter, primaryDevice) }.getOrNull()
+        if (link == null) {
+            run(onStep)
+            return
+        }
+
         val linked = runCatching {
-            val link = connect(adapter, primaryDevice)
+            link.awaitReady(Config.READY_TIMEOUT_MS)
+            link.isStereoLinked()
+        }.getOrDefault(false)
+
+        if (linked) {
+            // La connexion est deja ouverte : l'utiliser directement fait gagner
+            // les quelques secondes d'un second etablissement de liaison.
             try {
-                link.awaitReady(Config.READY_TIMEOUT_MS)
-                link.isStereoLinked()
+                fadeAndStop(link, onStep)
             } finally {
                 link.close()
             }
-        }.getOrDefault(false)
-
-        if (linked) powerOff(onStep) else run(onStep)
+            stopSecondary()
+        } else {
+            link.close()
+            run(onStep)
+        }
     }
 
     /**
@@ -187,27 +200,38 @@ class PartyController(private val context: Context) {
      */
     suspend fun powerOff(onStep: (Step) -> Unit) {
         val primaryDevice = settings.primary
-        val secondaryDevice = settings.secondary
-        if (primaryDevice == null || secondaryDevice == null) {
-            throw SpeakerException(context.getString(R.string.error_not_configured))
-        }
-        val adapter = adapter()
+            ?: throw SpeakerException(context.getString(R.string.error_not_configured))
 
-        onStep(Step.FADING_OUT)
         runCatching {
-            val primary = connect(adapter, primaryDevice)
+            val primary = connect(adapter(), primaryDevice)
             try {
-                primary.awaitReady(Config.READY_TIMEOUT_MS)
-                fadeOut(primary)
-                primary.write(JblProtocol.POWER_OFF)
+                fadeAndStop(primary, onStep)
             } finally {
                 primary.close()
             }
         }
+        stopSecondary()
+    }
 
-        onStep(Step.POWERING_OFF)
+    /**
+     * Fondu puis extinction de l'enceinte principale.
+     *
+     * Le fondu est ce que l'on entend : il passe avant tout le reste, et l'ecran
+     * est rendu des qu'il est termine. L'extinction de la seconde enceinte suit
+     * sans faire patienter.
+     */
+    private suspend fun fadeAndStop(primary: SpeakerLink, onStep: (Step) -> Unit) {
+        onStep(Step.FADING_OUT)
+        fadeOut(primary)
+        primary.write(JblProtocol.POWER_OFF)
+        onStep(Step.IDLE)
+    }
+
+    /** Eteint l'enceinte secondaire, une fois le silence obtenu. */
+    private suspend fun stopSecondary() {
+        val secondaryDevice = settings.secondary ?: return
         runCatching {
-            val secondary = connect(adapter, secondaryDevice)
+            val secondary = connect(adapter(), secondaryDevice)
             try {
                 secondary.write(JblProtocol.POWER_OFF)
                 delay(Config.INTER_WRITE_DELAY_MS)
@@ -215,13 +239,16 @@ class PartyController(private val context: Context) {
                 secondary.close()
             }
         }
-
-        onStep(Step.IDLE)
     }
 
     /** Abaisse progressivement le volume jusqu'au silence. */
     private suspend fun fadeOut(primary: SpeakerLink) {
-        val start = primary.readVolume() ?: return
+        // Lecture rapide : au-dela d'un instant, mieux vaut partir du dernier
+        // niveau connu que de retarder le fondu.
+        val start = primary.readVolume(Config.VOLUME_READ_MS)
+            ?: settings.lastVolume.takeIf { it > 0 }
+            ?: settings.wakeVolume.takeIf { it > 0 }
+            ?: return
         if (start <= 0) return
         settings.lastVolume = start
 

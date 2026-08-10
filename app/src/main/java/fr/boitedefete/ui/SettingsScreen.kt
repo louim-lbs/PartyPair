@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import fr.boitedefete.AppLanguage
 import fr.boitedefete.BuildConfig
 import fr.boitedefete.JblProtocol
 import fr.boitedefete.R
@@ -51,6 +52,8 @@ fun SettingsScreen(
     onExport: () -> Unit,
     onImport: () -> Unit,
     onCheckUpdate: () -> Unit,
+    onLanguage: (String) -> Unit,
+    currentLanguage: String,
     updateStatus: UpdateStatus?,
     onBack: () -> Unit
 ) {
@@ -185,6 +188,27 @@ fun SettingsScreen(
             color = Party.Muted
         )
 
+        if (AppLanguage.isSupported) {
+            Section(stringResource(R.string.section_language))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                listOf(
+                    R.string.language_system to "",
+                    R.string.language_fr to "fr",
+                    R.string.language_en to "en"
+                ).forEach { (labelRes, code) ->
+                    Text(
+                        stringResource(labelRes).uppercase(),
+                        style = Silkscreen.copy(fontSize = 12.sp),
+                        color = if (currentLanguage == code) Party.Orange else Party.Muted,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onLanguage(code) }
+                            .padding(vertical = 12.dp)
+                    )
+                }
+            }
+        }
+
         Section(stringResource(R.string.section_backup))
         Text(
             stringResource(R.string.backup_hint),
@@ -201,11 +225,14 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(14.dp))
         Entry(stringResource(R.string.check_update), onClick = onCheckUpdate)
-        updateStatus?.let {
+        updateStatus?.let { status ->
             Text(
-                it.text,
+                status.text,
                 style = Body.copy(fontSize = 13.sp),
-                color = if (it.actionable) Party.Orange else Party.Muted
+                color = if (status.actionable) Party.Orange else Party.Muted,
+                modifier = status.onClick
+                    ?.let { Modifier.fillMaxWidth().clickable(onClick = it).padding(vertical = 8.dp) }
+                    ?: Modifier
             )
         }
         Entry(stringResource(R.string.info_repo)) { onOpenUrl(REPO_URL) }
@@ -256,8 +283,15 @@ private fun balanceLabel(settings: Settings, value: Int): String = when {
     )
 }
 
-/** Compte rendu d'une verification de version. */
-data class UpdateStatus(val text: String, val actionable: Boolean = false)
+/**
+ * Compte rendu d'une verification de version.
+ * Le texte n'est cliquable que lorsqu'il y a effectivement quelque chose a faire.
+ */
+data class UpdateStatus(
+    val text: String,
+    val actionable: Boolean = false,
+    val onClick: (() -> Unit)? = null
+)
 
 @Composable
 private fun Section(title: String) {

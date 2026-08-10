@@ -102,9 +102,13 @@ class SpeakerLink private constructor(
     }
 
     /** Volume courant, ou null si l'enceinte ne le communique pas. */
-    suspend fun readVolume(): Int? =
-        queryField(JblProtocol.REQ_PLAYER_INFO, JblProtocol.RESP_PLAYER_INFO, JblProtocol.TAG_VOLUME)
-            ?.firstOrNull()?.toInt()?.and(0xFF)
+    suspend fun readVolume(timeoutMs: Long = 4_000L): Int? =
+        queryField(
+            JblProtocol.REQ_PLAYER_INFO,
+            JblProtocol.RESP_PLAYER_INFO,
+            JblProtocol.TAG_VOLUME,
+            timeoutMs
+        )?.firstOrNull()?.toInt()?.and(0xFF)
 
     /** Canal attribue a cette enceinte, ou null s'il n'est pas communique. */
     suspend fun readChannel(): Byte? =

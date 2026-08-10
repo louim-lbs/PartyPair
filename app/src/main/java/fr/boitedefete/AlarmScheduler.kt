@@ -99,8 +99,10 @@ class AlarmReceiver : BroadcastReceiver() {
         when (intent.action) {
             ACTION_SLEEP -> {
                 Settings(context).sleepAt = 0L
+                SleepTimer.dismiss(context)
                 PartyService.start(context, PartyService.ACTION_POWER_OFF)
             }
+            ACTION_CANCEL_SLEEP -> SleepTimer.cancel(context)
             ACTION_WAKE -> {
                 PartyService.start(context, PartyService.ACTION_WAKE)
                 // Preparer la suivante des maintenant.
@@ -113,5 +115,6 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_WAKE = "fr.boitedefete.action.ALARM_WAKE"
         const val ACTION_SLEEP = "fr.boitedefete.action.ALARM_SLEEP"
+        const val ACTION_CANCEL_SLEEP = "fr.boitedefete.action.CANCEL_SLEEP"
     }
 }

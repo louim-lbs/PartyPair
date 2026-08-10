@@ -200,7 +200,7 @@ class PartyService : Service() {
             }
         }
 
-        fun start(context: Context, action: String = ACTION_TOGGLE) {
+        fun start(context: Context, action: String = ACTION_TOGGLE): Boolean {
             // L'ecran doit repondre au doigt, pas au demarrage du service :
             // celui-ci met un instant a s'installer, puis la premiere connexion
             // BLE prend plusieurs secondes.
@@ -209,7 +209,10 @@ class PartyService : Service() {
                 ACTION_TOGGLE, ACTION_START, ACTION_WAKE -> state.value = UiState(Step.CHECKING)
             }
             val intent = Intent(context, PartyService::class.java).setAction(action)
-            runCatching { context.startForegroundService(intent) }
+            // Le systeme peut refuser un service de premier plan lance depuis
+            // l'arriere-plan : on le signale sans lever d'exception, pour que
+            // l'appelant puisse se rabattre sur une autre voie.
+            return runCatching { context.startForegroundService(intent) }.isSuccess
         }
     }
 }

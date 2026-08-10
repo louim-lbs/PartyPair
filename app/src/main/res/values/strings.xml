@@ -131,4 +131,11 @@
     <string name="playlist_name">Playlist name</string>
     <string name="playlist_name_hint">The most reliable way to actually start the right music: the name is handed to the music app as a play request. A link only opens the page.</string>
     <string name="warning_no_audio">%1$s did not join the phone for audio. Check it is selected as the output.</string>
+    <string name="section_language">Language</string>
+    <string name="language_system">System</string>
+    <string name="language_fr">Français</string>
+    <string name="language_en">English</string>
+    <string name="channel_sleep">Sleep timer</string>
+    <string name="sleep_notification_title">Speakers will fade out</string>
+    <string name="sleep_notification_text">Tap to open, or cancel below.</string>
 </resources>

@@ -126,4 +126,11 @@
     <string name="playlist_name">Nom de la playlist</string>
     <string name="playlist_name_hint">Le moyen le plus fiable de lancer vraiment la bonne musique : le nom est transmis à l\'application comme une demande de lecture. Un lien ne fait qu\'ouvrir la page.</string>
     <string name="warning_no_audio">%1$s n\'a pas rejoint le téléphone pour l\'audio. Vérifiez qu\'elle est bien choisie comme sortie.</string>
+    <string name="section_language">Langue</string>
+    <string name="language_system">Système</string>
+    <string name="language_fr">Français</string>
+    <string name="language_en">English</string>
+    <string name="channel_sleep">Minuterie</string>
+    <string name="sleep_notification_title">Extinction programmée</string>
+    <string name="sleep_notification_text">Touchez pour ouvrir, ou annulez ci-dessous.</string>
 </resources>

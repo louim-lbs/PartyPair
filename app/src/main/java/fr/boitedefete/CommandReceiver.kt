@@ -18,7 +18,19 @@ class CommandReceiver : BroadcastReceiver() {
         val action = intent.action ?: return
         if (action !in ALLOWED) return
         if (!Settings(context).isConfigured) return
-        PartyService.start(context, action)
+
+        // Depuis Android 12, une application en arriere-plan n'a pas toujours le
+        // droit de demarrer un service de premier plan. Si le systeme refuse, on
+        // passe par l'activite de declenchement, qui elle en a le droit.
+        if (!PartyService.start(context, action)) {
+            runCatching {
+                context.startActivity(
+                    Intent(context, TriggerActivity::class.java)
+                        .setAction(action)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
+        }
     }
 
     private companion object {

@@ -147,6 +147,8 @@ class MainActivity : ComponentActivity() {
                                 PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
                             },
                             onCheckUpdate = { checkUpdate { updateStatus = it } },
+                            onLanguage = { AppLanguage.set(this, it) },
+                            currentLanguage = AppLanguage.current(context),
                             updateStatus = updateStatus,
                             onExport = ::exportSetup,
                             onImport = {
@@ -192,7 +194,9 @@ class MainActivity : ComponentActivity() {
      * Un appui reveille et apparie ; le suivant met en veille.
      * La decision revient au controleur, qui verifie l'etat reel des enceintes.
      */
-    private fun togglePower() = PartyService.start(this, PartyService.ACTION_TOGGLE)
+    private fun togglePower() {
+        PartyService.start(this, PartyService.ACTION_TOGGLE)
+    }
 
     /**
      * Fait defiler les trois etats du renforcement des graves.
@@ -221,25 +225,34 @@ class MainActivity : ComponentActivity() {
                 UpdateChecker.Outcome.UpToDate ->
                     report(UpdateStatus(getString(R.string.update_none)))
 
-                UpdateChecker.Outcome.Unreachable -> {
-                    report(UpdateStatus(getString(R.string.update_failed), true))
-                    openUrl(UpdateChecker.releasesPage())
-                }
+                // Rien a proposer : on l'ecrit, sans emmener l'utilisateur ailleurs.
+                UpdateChecker.Outcome.Unreachable ->
+                    report(UpdateStatus(getString(R.string.update_failed)))
 
                 is UpdateChecker.Outcome.Available -> {
                     val release = outcome.release
                     val apkUrl = release.apkUrl
                     if (apkUrl == null) {
-                        report(UpdateStatus(getString(R.string.update_found, release.version), true))
-                        openUrl(UpdateChecker.releasesPage())
+                        report(
+                            UpdateStatus(
+                                getString(R.string.update_found, release.version),
+                                actionable = true,
+                                onClick = { openUrl(UpdateChecker.releasesPage()) }
+                            )
+                        )
                     } else {
                         report(UpdateStatus(getString(R.string.update_downloading), true))
                         val ok = UpdateChecker.downloadAndInstall(this@MainActivity, apkUrl)
                         if (ok) {
                             report(null)
                         } else {
-                            report(UpdateStatus(getString(R.string.update_failed), true))
-                            openUrl(UpdateChecker.releasesPage())
+                            report(
+                                UpdateStatus(
+                                    getString(R.string.update_failed),
+                                    actionable = true,
+                                    onClick = { openUrl(UpdateChecker.releasesPage()) }
+                                )
+                            )
                         }
                     }
                 }
@@ -282,11 +295,14 @@ class MainActivity : ComponentActivity() {
         runCatching { enableBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
     }
 
-    /** Ouvre l'application musicale puis lance la lecture. */
+    /**
+     * Ouvre l'application musicale.
+     *
+     * Un appui explicite doit toujours ouvrir : la retenue qui evite d'interrompre
+     * une ecoute en cours n'a de sens que pour un declenchement automatique.
+     */
     private fun playMusic() {
-        lifecycleScope.launch {
-            MusicLauncher.openAndPlay(this@MainActivity, Settings(this@MainActivity))
-        }
+        MusicLauncher.open(this, Settings(this))
     }
 
     private fun setSleepTimer(minutes: Int?) {
