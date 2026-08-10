@@ -29,7 +29,7 @@ class PartyService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification(getString(Step.WAKING_SECONDARY.label)))
+        startForeground(NOTIFICATION_ID, buildNotification(getString(Step.CHECKING.label)))
 
         if (job?.isActive == true) return START_NOT_STICKY
 
@@ -201,6 +201,13 @@ class PartyService : Service() {
         }
 
         fun start(context: Context, action: String = ACTION_TOGGLE) {
+            // L'ecran doit repondre au doigt, pas au demarrage du service :
+            // celui-ci met un instant a s'installer, puis la premiere connexion
+            // BLE prend plusieurs secondes.
+            when (action) {
+                ACTION_POWER_OFF -> state.value = UiState(Step.FADING_OUT)
+                ACTION_TOGGLE, ACTION_START, ACTION_WAKE -> state.value = UiState(Step.CHECKING)
+            }
             val intent = Intent(context, PartyService::class.java).setAction(action)
             runCatching { context.startForegroundService(intent) }
         }

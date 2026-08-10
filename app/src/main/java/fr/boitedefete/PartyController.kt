@@ -43,28 +43,32 @@ class PartyController(private val context: Context) {
     suspend fun run(onStep: (Step) -> Unit) {
         warning = null
         subject = null
+
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val secondaryDevice = settings.secondary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val adapter = adapter()
 
-        // L'enceinte secondaire peut etre debranchee ou hors de portee. Dans ce
-        // cas on continue avec la principale : de la musique sur une enceinte
-        // vaut mieux que le silence sur deux.
-        subject = Elision.of(secondaryDevice.name)
-        onStep(Step.WAKING_SECONDARY)
-        val secondary = runCatching { connect(adapter, secondaryDevice) }.getOrNull()
-        secondary?.awaitReady(Config.READY_TIMEOUT_MS)
+        // L'enceinte principale d'abord : c'est elle qu'on interroge pour
+        // connaitre l'etat de la paire, elle est donc reveillee la premiere.
+        // L'ordre des messages doit refleter ce qui se passe reellement.
+        subject = Elision.subject(primaryDevice.name)
+        onStep(Step.WAKING_PRIMARY)
+        val primary = connect(adapter, primaryDevice)
 
         try {
-            subject = Elision.of(primaryDevice.name)
-            onStep(Step.WAKING_PRIMARY)
-            val primary = connect(adapter, primaryDevice)
+            primary.awaitReady(Config.READY_TIMEOUT_MS)
+
+            // La secondaire peut etre debranchee ou hors de portee. Dans ce cas
+            // on continue avec la principale : de la musique sur une enceinte
+            // vaut mieux que le silence sur deux.
+            subject = Elision.subject(secondaryDevice.name)
+            onStep(Step.WAKING_SECONDARY)
+            val secondary = runCatching { connect(adapter, secondaryDevice) }.getOrNull()
+            secondary?.awaitReady(Config.READY_TIMEOUT_MS)
 
             try {
-                primary.awaitReady(Config.READY_TIMEOUT_MS)
-
                 // L'adresse du telephone ne sert qu'a la connexion audio :
                 // si elle est absente ou mal formee, la paire stereo doit
                 // s'etablir quand meme.
@@ -84,6 +88,8 @@ class PartyController(private val context: Context) {
                 // Inutile de refaire la paire si elle tient deja.
                 if (secondary != null && !primary.isStereoLinked()) {
                     onStep(Step.LINKING)
+                    // L'application JBL ecrit d'abord sur la secondaire, puis sur
+                    // la principale environ 250 ms plus tard.
                     secondary.write(JblProtocol.TWS_LINK)
                     delay(Config.INTER_WRITE_DELAY_MS)
                     primary.write(JblProtocol.TWS_LINK)
@@ -91,16 +97,21 @@ class PartyController(private val context: Context) {
                 }
 
                 if (secondary != null) rememberChannels(primary, secondary)
-                applyVolume(primary)
-                applyBassBoost(primary)
 
                 var audioConnected = true
                 if (phoneMac.isNotBlank()) {
                     onStep(Step.CONNECTING_AUDIO)
-                    audioConnected = awaitAudio(adapter) {
+                    audioConnected = awaitAudio(adapter, primaryDevice.mac) {
                         runCatching { primary.write(JblProtocol.connectTo(phoneMac)) }
                     }
                 }
+
+                // Le volume vient en dernier : a l'etablissement de la liaison
+                // audio, Android recopie son propre niveau vers l'enceinte et
+                // effacerait un reglage envoye plus tot. C'est ce qui laissait
+                // l'enceinte muette apres une mise en veille.
+                applyVolume(primary)
+                applyBassBoost(primary)
 
                 warning = when {
                     secondary == null -> context.getString(
@@ -113,12 +124,13 @@ class PartyController(private val context: Context) {
                     )
                     else -> null
                 }
+                subject = null
                 onStep(Step.READY)
             } finally {
-                primary.close()
+                secondary?.close()
             }
         } finally {
-            secondary?.close()
+            primary.close()
         }
     }
 
@@ -331,14 +343,23 @@ class PartyController(private val context: Context) {
         val primaryMac = settings.primary?.mac ?: return false
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         val adapter = manager?.adapter?.takeIf { it.isEnabled } ?: return false
+        return isAudioConnected(adapter, primaryMac)
+    }
 
+    /**
+     * Vrai si cette enceinte precise est connectee en audio.
+     *
+     * L'etat global de l'adaptateur ne suffit pas : il repond « connecte » des
+     * qu'un appareil quelconque l'est, casque compris.
+     */
+    private suspend fun isAudioConnected(adapter: BluetoothAdapter, mac: String): Boolean {
         return withTimeoutOrNull(Config.PROBE_TIMEOUT_MS) {
             suspendCancellableCoroutine { cont ->
                 val settled = AtomicBoolean(false)
                 val listener = object : BluetoothProfile.ServiceListener {
                     override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
                         val connected = runCatching {
-                            proxy.connectedDevices.any { it.address.equals(primaryMac, true) }
+                            proxy.connectedDevices.any { it.address.equals(mac, true) }
                         }.getOrDefault(false)
                         runCatching { adapter.closeProfileProxy(profile, proxy) }
                         if (settled.compareAndSet(false, true)) cont.resume(connected)
@@ -398,21 +419,26 @@ class PartyController(private val context: Context) {
      * Attend que l'enceinte principale rejoigne le telephone en audio,
      * en relancant l'invitation a mi-parcours si rien ne vient.
      */
-    private suspend fun awaitAudio(adapter: BluetoothAdapter, retry: () -> Unit): Boolean {
+    private suspend fun awaitAudio(
+        adapter: BluetoothAdapter,
+        mac: String,
+        retry: () -> Unit
+    ): Boolean {
         val deadline = System.currentTimeMillis() + Config.AUDIO_TIMEOUT_MS
         val halfway = System.currentTimeMillis() + Config.AUDIO_TIMEOUT_MS / 2
         var retried = false
         while (System.currentTimeMillis() < deadline) {
-            if (adapter.getProfileConnectionState(BluetoothProfile.A2DP) ==
-                BluetoothProfile.STATE_CONNECTED
-            ) return true
+            if (isAudioConnected(adapter, mac)) return true
             if (!retried && System.currentTimeMillis() > halfway) {
                 retried = true
                 retry()
             }
-            delay(800)
+            delay(1_000)
         }
-        return false
+        // Dernier controle : la liaison s'etablit parfois juste apres l'echeance,
+        // et annoncer un echec alors que le son sort serait deroutant.
+        delay(2_000)
+        return isAudioConnected(adapter, mac)
     }
 
     private fun adapter(): BluetoothAdapter {

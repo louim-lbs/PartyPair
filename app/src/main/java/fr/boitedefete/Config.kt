@@ -24,7 +24,7 @@ object Config {
     const val READY_TIMEOUT_MS = 20_000L
 
     /** Delai d'attente de la connexion audio de l'enceinte principale. */
-    const val AUDIO_TIMEOUT_MS = 12_000L
+    const val AUDIO_TIMEOUT_MS = 25_000L
 
     /** Tentatives de connexion avant d'abandonner. */
     const val CONNECT_ATTEMPTS = 2

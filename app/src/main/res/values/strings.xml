@@ -124,7 +124,7 @@
     <string name="check_update">Check for updates</string>
     <string name="update_checking">Checking…</string>
     <string name="update_none">✅ You already have the latest version.</string>
-    <string name="update_failed">Could not reach the repository.</string>
+    <string name="update_failed">No release found on the repository. Create one, or check your connection.</string>
     <string name="update_found">Version %1$s is available — tap to download.</string>
     <string name="update_downloading">Downloading…</string>
     <string name="step_checking">Checking the speakers</string>

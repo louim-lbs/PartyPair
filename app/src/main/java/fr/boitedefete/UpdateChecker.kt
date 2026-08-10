@@ -51,14 +51,31 @@ object UpdateChecker {
         }
     }
 
+    /** Issue d'une verification demandee explicitement. */
+    sealed interface Outcome {
+        /** Une version plus recente est publiee. */
+        data class Available(val release: Release) : Outcome
+        /** Le depot repond, rien de nouveau. */
+        data object UpToDate : Outcome
+        /**
+         * Le depot n'a pas repondu, ou ne publie aucune version.
+         * Distinguer ce cas evite d'annoncer « a jour » alors qu'on ne sait rien.
+         */
+        data object Unreachable : Outcome
+    }
+
     /**
      * Verification demandee explicitement : ignore le delai d'un jour et rend
      * compte du resultat, y compris quand tout est deja a jour.
      */
-    suspend fun checkNow(context: Context): Release? {
+    suspend fun checkNow(context: Context): Outcome {
         Settings(context).lastUpdateCheck = System.currentTimeMillis()
-        val release = withContext(Dispatchers.IO) { fetchLatest() } ?: return null
-        return release.takeIf { isNewer(it.version, BuildConfig.VERSION_NAME) }
+        val release = withContext(Dispatchers.IO) { fetchLatest() } ?: return Outcome.Unreachable
+        return if (isNewer(release.version, BuildConfig.VERSION_NAME)) {
+            Outcome.Available(release)
+        } else {
+            Outcome.UpToDate
+        }
     }
 
     /**

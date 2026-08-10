@@ -215,21 +215,32 @@ class MainActivity : ComponentActivity() {
     private fun checkUpdate(report: (UpdateStatus?) -> Unit) {
         report(UpdateStatus(getString(R.string.update_checking)))
         lifecycleScope.launch {
-            val release = runCatching { UpdateChecker.checkNow(this@MainActivity) }.getOrNull()
-            when {
-                release == null -> report(UpdateStatus(getString(R.string.update_none)))
-                release.apkUrl == null -> {
-                    report(UpdateStatus(getString(R.string.update_found, release.version), true))
+            val outcome = runCatching { UpdateChecker.checkNow(this@MainActivity) }
+                .getOrDefault(UpdateChecker.Outcome.Unreachable)
+            when (outcome) {
+                UpdateChecker.Outcome.UpToDate ->
+                    report(UpdateStatus(getString(R.string.update_none)))
+
+                UpdateChecker.Outcome.Unreachable -> {
+                    report(UpdateStatus(getString(R.string.update_failed), true))
                     openUrl(UpdateChecker.releasesPage())
                 }
-                else -> {
-                    report(UpdateStatus(getString(R.string.update_downloading), true))
-                    val ok = UpdateChecker.downloadAndInstall(this@MainActivity, release.apkUrl)
-                    if (ok) {
-                        report(null)
-                    } else {
-                        report(UpdateStatus(getString(R.string.update_failed), true))
+
+                is UpdateChecker.Outcome.Available -> {
+                    val release = outcome.release
+                    val apkUrl = release.apkUrl
+                    if (apkUrl == null) {
+                        report(UpdateStatus(getString(R.string.update_found, release.version), true))
                         openUrl(UpdateChecker.releasesPage())
+                    } else {
+                        report(UpdateStatus(getString(R.string.update_downloading), true))
+                        val ok = UpdateChecker.downloadAndInstall(this@MainActivity, apkUrl)
+                        if (ok) {
+                            report(null)
+                        } else {
+                            report(UpdateStatus(getString(R.string.update_failed), true))
+                            openUrl(UpdateChecker.releasesPage())
+                        }
                     }
                 }
             }

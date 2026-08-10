@@ -113,13 +113,13 @@
     <string name="channel_updates">Mises à jour</string>
     <string name="update_title">La version %1$s est disponible</string>
     <string name="update_body">Touchez pour ouvrir la page de publication.</string>
-    <string name="step_waking_named">Réveil de %1$s</string>
+    <string name="step_waking_named">Réveil %1$s</string>
     <string name="alarm_window">Plage de réveil : %1$dh à %2$dh</string>
     <string name="alarm_window_hint">Android ne dit pas quelle alarme vient du mode sommeil : seules celles qui tombent dans cette plage réveillent les enceintes. Les minuteries de cuisine et les rappels de la journée sont ignorés.</string>
     <string name="check_update">Vérifier les mises à jour</string>
     <string name="update_checking">Vérification…</string>
     <string name="update_none">✅ Vous avez déjà la dernière version.</string>
-    <string name="update_failed">Impossible de joindre le dépôt.</string>
+    <string name="update_failed">Aucune publication trouvée sur le dépôt. Créez une release, ou vérifiez la connexion.</string>
     <string name="update_found">La version %1$s est disponible — touchez pour la télécharger.</string>
     <string name="update_downloading">Téléchargement…</string>
     <string name="step_checking">Vérification des enceintes</string>

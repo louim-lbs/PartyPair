@@ -41,12 +41,21 @@ object MusicLauncher {
         if (isPlaying(context)) return
         val packageName = settings.musicApp ?: return
 
-        if (playFromSearch(context, packageName, settings.playlistName)) return
+        // Une application peut accepter l'intention sans rien jouer : on juge au
+        // resultat plutot qu'a la reponse du systeme.
+        if (playFromSearch(context, packageName, settings.playlistName)) {
+            delay(5_000)
+            if (isPlaying(context)) return
+        }
 
         if (settings.musicUrl.isNotBlank() && openUrl(context, packageName, settings.musicUrl)) {
-            // Le lien affiche la playlist ; on ne force pas la lecture, la touche
-            // « lecture » relancerait le morceau precedent.
-            return
+            delay(4_000)
+            if (isPlaying(context)) return
+            // La playlist est affichee mais silencieuse : la touche « lecture »
+            // demarre ce qui est a l'ecran dans la plupart des lecteurs.
+            play(context)
+            delay(2_500)
+            if (isPlaying(context)) return
         }
 
         if (!launch(context, packageName)) return

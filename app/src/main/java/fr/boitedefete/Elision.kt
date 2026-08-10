@@ -11,6 +11,13 @@ package fr.boitedefete
  */
 object Elision {
 
+    /**
+     * Prefixe le nom si la langue courante l'exige.
+     * Les autres langues recoivent le nom nu : « Waking Hildegarde ».
+     */
+    fun subject(name: String): String =
+        if (java.util.Locale.getDefault().language == "fr") of(name) else name.trim()
+
     /** Retirer 'h' de cette chaine pour appliquer la regle du h aspire. */
     private const val ELIDE_BEFORE = "aeiouyàâäéèêëîïôöùûüh"
 
