@@ -52,6 +52,8 @@ fun SettingsScreen(
     onExport: () -> Unit,
     onImport: () -> Unit,
     onCheckUpdate: () -> Unit,
+    notificationsAllowed: Boolean,
+    onOpenNotificationSettings: () -> Unit,
     onLanguage: (String) -> Unit,
     currentLanguage: String,
     updateStatus: UpdateStatus?,
@@ -207,6 +209,16 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+
+        if (!notificationsAllowed) {
+            Section(stringResource(R.string.section_notifications))
+            Text(
+                stringResource(R.string.notifications_blocked),
+                style = Body.copy(fontSize = 13.sp),
+                color = Party.Muted
+            )
+            Entry(stringResource(R.string.notifications_open), onClick = onOpenNotificationSettings)
         }
 
         Section(stringResource(R.string.section_backup))

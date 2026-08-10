@@ -124,7 +124,7 @@
     <string name="check_update">Check for updates</string>
     <string name="update_checking">Checking…</string>
     <string name="update_none">✅ You already have the latest version.</string>
-    <string name="update_failed">No release found on the repository. Create one, or check your connection.</string>
+    <string name="update_failed">Could not check right now. Try again later.</string>
     <string name="update_found">Version %1$s is available — tap to download.</string>
     <string name="update_downloading">Downloading…</string>
     <string name="step_checking">Checking the speakers</string>
@@ -137,5 +137,9 @@
     <string name="language_en">English</string>
     <string name="channel_sleep">Sleep timer</string>
     <string name="sleep_notification_title">Speakers will fade out</string>
-    <string name="sleep_notification_text">Tap to open, or cancel below.</string>
+    <string name="channel_left">L</string>
+    <string name="channel_right">R</string>
+    <string name="section_notifications">Notifications</string>
+    <string name="notifications_blocked">Notifications are turned off, so the sleep timer countdown and failure alerts cannot appear.</string>
+    <string name="notifications_open">Open notification settings</string>
 </resources>

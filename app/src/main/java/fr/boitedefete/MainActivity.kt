@@ -93,6 +93,7 @@ class MainActivity : ComponentActivity() {
         // L'etat vit en memoire : au retour dans l'application, il faut verifier
         // que les enceintes ne sont pas deja en service.
         if (permissionGranted) {
+            SleepTimer.restore(this)
             lifecycleScope.launch {
                 PartyService.refreshState(this@MainActivity)
                 UpdateChecker.checkQuietly(this@MainActivity)
@@ -147,6 +148,8 @@ class MainActivity : ComponentActivity() {
                                 PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
                             },
                             onCheckUpdate = { checkUpdate { updateStatus = it } },
+                            notificationsAllowed = SleepTimer.notificationsAllowed(context),
+                            onOpenNotificationSettings = ::openNotificationSettings,
                             onLanguage = { AppLanguage.set(this, it) },
                             currentLanguage = AppLanguage.current(context),
                             updateStatus = updateStatus,
@@ -339,6 +342,16 @@ class MainActivity : ComponentActivity() {
         AlarmScheduler.reschedule(this)
     }
 
+    /** Emmene aux reglages de notifications de l'application. */
+    private fun openNotificationSettings() {
+        runCatching {
+            startActivity(
+                Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(AndroidSettings.EXTRA_APP_PACKAGE, packageName)
+            )
+        }
+    }
+
     private fun openUrl(url: String) {
         runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     }
@@ -375,13 +388,17 @@ class MainActivity : ComponentActivity() {
     private fun askPermission() = requestPermissions.launch(neededPermissions())
 }
 
-/** « Cécile (G) · Hildegarde (D) », ou les seuls noms si le canal est inconnu. */
+/** « Cécile (G) · Hildegarde (D) » en français, « (L) » et « (R) » ailleurs. */
+@Composable
 private fun speakerSummary(settings: Settings): String {
+    val left = stringResource(R.string.channel_left)
+    val right = stringResource(R.string.channel_right)
+
     fun label(name: String?, channel: Int): String? {
         if (name == null) return null
         val side = when (channel) {
-            1 -> "G"
-            2 -> "D"
+            1 -> left
+            2 -> right
             else -> return name
         }
         return "$name ($side)"
@@ -435,7 +452,9 @@ private fun PartyScreen(
 
     var bass by remember { mutableStateOf(settings.bassBoost) }
     var alarmOn by remember { mutableStateOf(settings.alarmEnabled) }
-    var sleepLeft by remember { mutableStateOf(SleepTimer.remainingMinutes(context)) }
+    // Echeance partagee : annuler depuis la notification se voit ici sans delai.
+    val sleepAt by SleepTimer.deadline.collectAsState()
+    val sleepLeft = SleepTimer.remainingMinutes(sleepAt)
     var sleepDialog by remember { mutableStateOf(false) }
     var standbyDialog by remember { mutableStateOf(false) }
 
@@ -482,7 +501,6 @@ private fun PartyScreen(
             activeMinutes = sleepLeft,
             onPick = { minutes ->
                 onSleepTimer(minutes)
-                sleepLeft = minutes
                 sleepDialog = false
             },
             onDismiss = { sleepDialog = false }
@@ -616,10 +634,7 @@ private fun PartyScreen(
                         value = sleepLeft?.let { stringResource(R.string.sleep_minutes, it) }
                             ?: stringResource(R.string.bass_off),
                         active = sleepLeft != null,
-                        onClick = {
-                            sleepLeft = SleepTimer.remainingMinutes(context)
-                            sleepDialog = true
-                        }
+                        onClick = { sleepDialog = true }
                     ),
                     ControlEntry(
                         label = stringResource(R.string.section_alarm),

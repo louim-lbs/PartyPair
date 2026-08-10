@@ -63,12 +63,14 @@ object MusicLauncher {
         play(context)
     }
 
-    /** Ouvre l'application, et sa playlist si une adresse est enregistree. */
+    /**
+     * Ouvre simplement l'application musicale.
+     *
+     * Un appui sur le bouton veut dire « ouvre Deezer », pas « impose-moi la
+     * playlist du reveil » : celle-ci n'a de sens qu'au declenchement automatique.
+     */
     fun open(context: Context, settings: Settings): Boolean {
         val packageName = settings.musicApp ?: return false
-        if (settings.musicUrl.isNotBlank() && openUrl(context, packageName, settings.musicUrl)) {
-            return true
-        }
         return launch(context, packageName)
     }
 

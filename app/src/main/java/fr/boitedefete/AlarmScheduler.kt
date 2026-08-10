@@ -103,6 +103,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 PartyService.start(context, PartyService.ACTION_POWER_OFF)
             }
             ACTION_CANCEL_SLEEP -> SleepTimer.cancel(context)
+            ACTION_SLEEP_TICK -> SleepTimer.refresh(context)
             ACTION_WAKE -> {
                 PartyService.start(context, PartyService.ACTION_WAKE)
                 // Preparer la suivante des maintenant.
@@ -116,5 +117,6 @@ class AlarmReceiver : BroadcastReceiver() {
         const val ACTION_WAKE = "fr.boitedefete.action.ALARM_WAKE"
         const val ACTION_SLEEP = "fr.boitedefete.action.ALARM_SLEEP"
         const val ACTION_CANCEL_SLEEP = "fr.boitedefete.action.CANCEL_SLEEP"
+        const val ACTION_SLEEP_TICK = "fr.boitedefete.action.SLEEP_TICK"
     }
 }

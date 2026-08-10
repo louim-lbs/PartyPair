@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -74,17 +75,23 @@ fun SetupScreen(
         ) {
             Text(
                 stringResource(R.string.setup_title).uppercase(),
-                style = Display.copy(fontSize = 24.sp),
-                color = Party.Silkscreen
+                style = Display.copy(fontSize = 22.sp),
+                color = Party.Silkscreen,
+                maxLines = 1,
+                modifier = Modifier.weight(1f, fill = false)
             )
             onCancel?.let { cancel ->
+                Spacer(Modifier.width(12.dp))
                 Text(
                     stringResource(R.string.cancel).uppercase(),
                     style = Silkscreen.copy(fontSize = 13.sp),
                     color = Party.Muted,
+                    // Le titre cede la place plutot que d'ecraser le bouton.
+                    maxLines = 1,
+                    softWrap = false,
                     modifier = Modifier
                         .clickable(onClick = cancel)
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .padding(horizontal = 4.dp, vertical = 6.dp)
                 )
             }
         }
