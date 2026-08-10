@@ -163,7 +163,7 @@ class SpeakerLink private constructor(
                         service.getCharacteristic(JblProtocol.RX)?.let {
                             runCatching { g.setCharacteristicNotification(it, true) }
                         }
-                        cont.resume(SpeakerLink(g, txChar, notifications))
+                        cont.resume(SpeakerLink(g, txChar, inbox))
                     }
 
                     @Deprecated("Conserve pour Android 12 et anterieurs")
