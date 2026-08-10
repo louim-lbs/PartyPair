@@ -50,6 +50,8 @@ fun SettingsScreen(
     onSwapChannels: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
+    onCheckUpdate: () -> Unit,
+    updateStatus: String?,
     onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
@@ -58,6 +60,8 @@ fun SettingsScreen(
     var volume by remember { mutableFloatStateOf(settings.wakeVolume.toFloat()) }
     var url by remember { mutableStateOf(settings.musicUrl) }
     var balance by remember { mutableFloatStateOf(settings.balance.toFloat()) }
+    var fromHour by remember { mutableFloatStateOf(settings.alarmFromHour.toFloat()) }
+    var toHour by remember { mutableFloatStateOf(settings.alarmToHour.toFloat()) }
 
     Column(
         modifier = Modifier
@@ -139,6 +143,32 @@ fun SettingsScreen(
             color = Party.Muted
         )
 
+        Section(stringResource(R.string.section_alarm))
+        Text(
+            stringResource(R.string.alarm_window, fromHour.toInt(), toHour.toInt()),
+            style = Body,
+            color = Party.Silkscreen
+        )
+        Slider(
+            value = fromHour,
+            onValueChange = { fromHour = it },
+            onValueChangeFinished = { settings.alarmFromHour = fromHour.toInt() },
+            valueRange = 0f..23f,
+            steps = 22
+        )
+        Slider(
+            value = toHour,
+            onValueChange = { toHour = it },
+            onValueChangeFinished = { settings.alarmToHour = toHour.toInt() },
+            valueRange = 0f..23f,
+            steps = 22
+        )
+        Text(
+            stringResource(R.string.alarm_window_hint),
+            style = Body.copy(fontSize = 13.sp),
+            color = Party.Muted
+        )
+
         Section(stringResource(R.string.section_backup))
         Text(
             stringResource(R.string.backup_hint),
@@ -154,6 +184,10 @@ fun SettingsScreen(
         InfoRow(stringResource(R.string.info_license), "MIT")
 
         Spacer(Modifier.height(14.dp))
+        Entry(stringResource(R.string.check_update), onClick = onCheckUpdate)
+        updateStatus?.let {
+            Text(it, style = Body.copy(fontSize = 13.sp), color = Party.Orange)
+        }
         Entry(stringResource(R.string.info_repo)) { onOpenUrl(REPO_URL) }
         Entry(stringResource(R.string.info_issues)) { onOpenUrl(ISSUES_URL) }
         Entry(stringResource(R.string.info_license_link)) { onOpenUrl(LICENSE_URL) }

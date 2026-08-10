@@ -7,8 +7,6 @@
 
     <!-- Etapes de la sequence -->
     <string name="step_idle">Asleep</string>
-    <string name="step_waking_secondary">Waking the second speaker</string>
-    <string name="step_waking_primary">Waking the main speaker</string>
     <string name="step_linking">Stereo link</string>
     <string name="step_ready">Ready</string>
     <string name="step_failed">Failed</string>
@@ -115,9 +113,18 @@
     <string name="standby_confirm_title">Put the speakers to sleep?</string>
     <string name="standby_confirm_body">The sound will fade out, then both speakers switch off.</string>
     <string name="standby_confirm_yes">Sleep</string>
-    <string name="standby_confirm_no">Keep playing</string>
+    <string name="standby_confirm_no">Cancel</string>
     <string name="dont_ask_again">Do not ask again</string>
     <string name="channel_updates">Updates</string>
     <string name="update_title">Version %1$s is available</string>
     <string name="update_body">Tap to open the release page.</string>
+    <string name="step_waking_named">Waking %1$s</string>
+    <string name="alarm_window">Wake window: %1$dh to %2$dh</string>
+    <string name="alarm_window_hint">Android does not say which alarm comes from bedtime mode, so only alarms inside this window trigger the speakers. Kitchen timers and daytime reminders are left alone.</string>
+    <string name="check_update">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_none">You already have the latest version.</string>
+    <string name="update_failed">Could not reach the repository.</string>
+    <string name="update_found">Version %1$s is available — tap to download.</string>
+    <string name="update_downloading">Downloading…</string>
 </resources>

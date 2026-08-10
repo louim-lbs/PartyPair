@@ -73,40 +73,51 @@ class SpeakerLink private constructor(
     } ?: false
 
     /**
-     * Envoie une requete et attend la reponse portant la commande voulue.
-     * Renvoie null si l'enceinte ne repond pas a temps.
+     * Lit un champ precis dans les reponses de l'enceinte.
+     *
+     * Une meme requete provoque plusieurs notifications portant le meme opcode :
+     * un long etat complet, puis de courtes mises a jour partielles. Se contenter
+     * de la premiere revient a tirer au sort. On parcourt donc les reponses
+     * jusqu'a en trouver une qui contienne vraiment le champ demande.
      */
-    suspend fun query(request: ByteArray, expected: Byte, timeoutMs: Long = 2_500L): ByteArray? =
-        withTimeoutOrNull(timeoutMs) {
-            var answer: ByteArray? = null
-            while (answer == null) {
-                write(request)
-                answer = withTimeoutOrNull(PROBE_INTERVAL_MS) {
-                    notifications.first { JblProtocol.commandOf(it) == expected }
-                }
+    private suspend fun queryField(
+        request: ByteArray,
+        expected: Byte,
+        tag: Int,
+        timeoutMs: Long = 4_000L
+    ): ByteArray? = withTimeoutOrNull(timeoutMs) {
+        var found: ByteArray? = null
+        while (found == null) {
+            write(request)
+            withTimeoutOrNull(PROBE_INTERVAL_MS) {
+                notifications
+                    .first { frame ->
+                        JblProtocol.commandOf(frame) == expected &&
+                            JblProtocol.parseFields(frame).containsKey(tag)
+                    }
+                    .let { found = JblProtocol.parseFields(it)[tag] }
             }
-            answer
         }
+        found
+    }
 
     /** Volume courant, ou null si l'enceinte ne le communique pas. */
-    suspend fun readVolume(): Int? {
-        val answer = query(JblProtocol.REQ_PLAYER_INFO, JblProtocol.RESP_PLAYER_INFO) ?: return null
-        val raw = JblProtocol.parseFields(answer)[JblProtocol.TAG_VOLUME] ?: return null
-        return raw.firstOrNull()?.toInt()?.and(0xFF)
-    }
+    suspend fun readVolume(): Int? =
+        queryField(JblProtocol.REQ_PLAYER_INFO, JblProtocol.RESP_PLAYER_INFO, JblProtocol.TAG_VOLUME)
+            ?.firstOrNull()?.toInt()?.and(0xFF)
 
     /** Canal attribue a cette enceinte, ou null s'il n'est pas communique. */
-    suspend fun readChannel(): Byte? {
-        val answer = query(JblProtocol.REQ_DEVICE_INFO, JblProtocol.RESP_DEV_INFO) ?: return null
-        return JblProtocol.parseFields(answer)[JblProtocol.TAG_CHANNEL]?.firstOrNull()
-    }
+    suspend fun readChannel(): Byte? =
+        queryField(JblProtocol.REQ_DEVICE_INFO, JblProtocol.RESP_DEV_INFO, JblProtocol.TAG_CHANNEL)
+            ?.firstOrNull()
 
     /** Vrai si la paire stereo est deja etablie. */
-    suspend fun isStereoLinked(): Boolean {
-        val answer = query(JblProtocol.REQ_DEVICE_INFO, JblProtocol.RESP_DEV_INFO) ?: return false
-        val raw = JblProtocol.parseFields(answer)[JblProtocol.TAG_PARTY_CONNECT] ?: return false
-        return raw.firstOrNull() == JblProtocol.PARTY_CONNECTED
-    }
+    suspend fun isStereoLinked(): Boolean =
+        queryField(
+            JblProtocol.REQ_DEVICE_INFO,
+            JblProtocol.RESP_DEV_INFO,
+            JblProtocol.TAG_PARTY_CONNECT
+        )?.firstOrNull() == JblProtocol.PARTY_CONNECTED
 
     fun close() {
         runCatching { gatt.disconnect() }

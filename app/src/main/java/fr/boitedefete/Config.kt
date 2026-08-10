@@ -36,6 +36,12 @@ object Config {
     /** Delai pour interroger Android sur ses connexions audio. */
     const val PROBE_TIMEOUT_MS = 4_000L
 
+    /** Duree maximale d'attente du retour du Bluetooth apres le mode sommeil. */
+    const val BLUETOOTH_WAIT_MS = 180_000L
+
+    /** Repit laisse a la pile Bluetooth une fois rallumee. */
+    const val BLUETOOTH_SETTLE_MS = 8_000L
+
     /** Decompte avant l'ouverture de l'application musicale, en secondes. */
     const val MUSIC_COUNTDOWN_SECONDS = 5
 }

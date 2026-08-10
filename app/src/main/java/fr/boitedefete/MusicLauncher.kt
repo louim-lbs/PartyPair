@@ -2,6 +2,7 @@ package fr.boitedefete
 
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.delay
 import android.media.AudioManager
 import android.net.Uri
 import android.view.KeyEvent
@@ -34,6 +35,21 @@ object MusicLauncher {
             ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
             ?: return false
         return runCatching { context.startActivity(launch) }.isSuccess
+    }
+
+    /**
+     * Ouvre l'application puis lance la lecture.
+     *
+     * Le lecteur a besoin d'un instant pour charger la playlist avant d'accepter
+     * la commande ; on lui laisse ce temps, et on insiste une seconde fois au
+     * cas ou la premiere sollicitation arriverait trop tot.
+     */
+    suspend fun openAndPlay(context: Context, settings: Settings) {
+        if (!open(context, settings)) return
+        delay(3_500)
+        play(context)
+        delay(2_000)
+        play(context)
     }
 
     /**

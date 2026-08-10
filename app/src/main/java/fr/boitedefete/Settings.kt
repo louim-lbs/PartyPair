@@ -107,6 +107,22 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_ALARM_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_ALARM_ENABLED, value).apply()
 
+    /**
+     * Bornes horaires du reveil, en heures pleines.
+     *
+     * Android ne distingue pas l'alarme du mode sommeil des autres : rien dans
+     * l'information fournie ne dit d'ou vient l'alarme. On se rabat donc sur
+     * une plage horaire, qui ecarte les minuteries de cuisine et les rappels
+     * de la journee.
+     */
+    var alarmFromHour: Int
+        get() = prefs.getInt(KEY_ALARM_FROM, 4)
+        set(value) = prefs.edit().putInt(KEY_ALARM_FROM, value.coerceIn(0, 23)).apply()
+
+    var alarmToHour: Int
+        get() = prefs.getInt(KEY_ALARM_TO, 11)
+        set(value) = prefs.edit().putInt(KEY_ALARM_TO, value.coerceIn(0, 23)).apply()
+
     /** Avance, en minutes, sur l'alarme du telephone. */
     var alarmLeadMinutes: Int
         get() = prefs.getInt(KEY_ALARM_LEAD, 1)
@@ -198,6 +214,8 @@ class Settings(context: Context) {
         private const val KEY_LAST_VOLUME = "last_volume"
         private const val KEY_ALARM_ENABLED = "alarm_enabled"
         private const val KEY_ALARM_LEAD = "alarm_lead"
+        private const val KEY_ALARM_FROM = "alarm_from"
+        private const val KEY_ALARM_TO = "alarm_to"
         private const val KEY_BALANCE = "balance"
         private const val KEY_BASS_BOOST = "bass_boost"
         private const val KEY_SLEEP_AT = "sleep_at"

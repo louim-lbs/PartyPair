@@ -17,8 +17,8 @@ import kotlin.math.max
 /** Etapes de la sequence. Le libelle suit la langue du telephone. */
 enum class Step(@StringRes val label: Int) {
     IDLE(R.string.step_idle),
-    WAKING_SECONDARY(R.string.step_waking_secondary),
-    WAKING_PRIMARY(R.string.step_waking_primary),
+    WAKING_SECONDARY(R.string.step_waking_named),
+    WAKING_PRIMARY(R.string.step_waking_named),
     LINKING(R.string.step_linking),
     CONNECTING_AUDIO(R.string.step_connecting_audio),
     FADING_OUT(R.string.step_fading_out),
@@ -41,6 +41,7 @@ class PartyController(private val context: Context) {
 
     suspend fun run(onStep: (Step) -> Unit) {
         warning = null
+        subject = null
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val secondaryDevice = settings.secondary
@@ -50,11 +51,13 @@ class PartyController(private val context: Context) {
         // L'enceinte secondaire peut etre debranchee ou hors de portee. Dans ce
         // cas on continue avec la principale : de la musique sur une enceinte
         // vaut mieux que le silence sur deux.
+        subject = secondaryDevice.name
         onStep(Step.WAKING_SECONDARY)
         val secondary = runCatching { connect(adapter, secondaryDevice) }.getOrNull()
         secondary?.awaitReady(Config.READY_TIMEOUT_MS)
 
         try {
+            subject = primaryDevice.name
             onStep(Step.WAKING_PRIMARY)
             val primary = connect(adapter, primaryDevice)
 
@@ -116,6 +119,13 @@ class PartyController(private val context: Context) {
      * de facon degradee. Null si tout s'est passe normalement.
      */
     var warning: String? = null
+        private set
+
+    /**
+     * Nom de l'enceinte concernee par l'etape en cours.
+     * « Réveil de Hildegarde » se comprend mieux que « la seconde enceinte ».
+     */
+    var subject: String? = null
         private set
 
     /**

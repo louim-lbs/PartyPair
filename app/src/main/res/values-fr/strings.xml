@@ -6,8 +6,6 @@
     <string name="not_configured">Ouvrez l\'application pour choisir vos enceintes.</string>
 
     <string name="step_idle">En veille</string>
-    <string name="step_waking_secondary">Réveil de la seconde enceinte</string>
-    <string name="step_waking_primary">Réveil de l\'enceinte principale</string>
     <string name="step_linking">Liaison stéréo</string>
     <string name="step_ready">Prêt</string>
     <string name="step_failed">Échec</string>
@@ -110,9 +108,18 @@
     <string name="standby_confirm_title">Mettre les enceintes en veille ?</string>
     <string name="standby_confirm_body">Le son descendra en fondu, puis les deux enceintes s\'éteindront.</string>
     <string name="standby_confirm_yes">Mettre en veille</string>
-    <string name="standby_confirm_no">Continuer</string>
+    <string name="standby_confirm_no">Annuler</string>
     <string name="dont_ask_again">Ne plus demander</string>
     <string name="channel_updates">Mises à jour</string>
     <string name="update_title">La version %1$s est disponible</string>
     <string name="update_body">Touchez pour ouvrir la page de publication.</string>
+    <string name="step_waking_named">Réveil de %1$s</string>
+    <string name="alarm_window">Plage de réveil : %1$dh à %2$dh</string>
+    <string name="alarm_window_hint">Android ne dit pas quelle alarme vient du mode sommeil : seules celles qui tombent dans cette plage réveillent les enceintes. Les minuteries de cuisine et les rappels de la journée sont ignorés.</string>
+    <string name="check_update">Vérifier les mises à jour</string>
+    <string name="update_checking">Vérification…</string>
+    <string name="update_none">Vous avez déjà la dernière version.</string>
+    <string name="update_failed">Impossible de joindre le dépôt.</string>
+    <string name="update_found">La version %1$s est disponible — touchez pour la télécharger.</string>
+    <string name="update_downloading">Téléchargement…</string>
 </resources>

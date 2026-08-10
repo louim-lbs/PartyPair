@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /**
@@ -29,6 +30,8 @@ object AlarmScheduler {
         if (!canScheduleExact(manager)) return
 
         val nextAlarm = manager.nextAlarmClock ?: return
+        if (!inMorningWindow(nextAlarm.triggerTime, settings)) return
+
         val lead = TimeUnit.MINUTES.toMillis(settings.alarmLeadMinutes.toLong())
         val triggerAt = nextAlarm.triggerTime - lead
         if (triggerAt <= System.currentTimeMillis()) return
@@ -47,6 +50,20 @@ object AlarmScheduler {
             ?: context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
             ?: return
         runCatching { am.cancel(pendingIntent(context)) }
+    }
+
+    /**
+     * Vrai si l'alarme tombe dans la plage retenue comme etant celle du reveil.
+     *
+     * Une plage a cheval sur minuit, par exemple 22h a 6h, est acceptee.
+     */
+    internal fun inMorningWindow(triggerTime: Long, settings: Settings): Boolean {
+        val hour = Calendar.getInstance()
+            .apply { timeInMillis = triggerTime }
+            .get(Calendar.HOUR_OF_DAY)
+        val from = settings.alarmFromHour
+        val to = settings.alarmToHour
+        return if (from <= to) hour in from..to else hour >= from || hour <= to
     }
 
     /** Heure de la prochaine alarme du telephone, ou null s'il n'y en a pas. */

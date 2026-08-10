@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.app.PendingIntent
@@ -37,7 +38,7 @@ class PartyService : Service() {
         job = scope.launch(Dispatchers.IO) {
             val controller = PartyController(applicationContext)
             val report: (Step) -> Unit = { step ->
-                state.value = UiState(step, warning = controller.warning)
+                state.value = UiState(step, warning = controller.warning, subject = controller.subject)
                 if (step == Step.READY && action in PROMPTING_ACTIONS) musicPrompt.value = true
                 if (step == Step.IDLE) musicPrompt.value = false
                 notify(getString(step.label))
@@ -58,10 +59,9 @@ class PartyService : Service() {
                     ACTION_WAKE -> {
                         // Declenche par l'alarme : aucune fenetre ne peut s'ouvrir,
                         // on lance donc la musique directement.
+                        awaitBluetooth()
                         controller.run(report)
-                        MusicLauncher.open(applicationContext, Settings(applicationContext))
-                        kotlinx.coroutines.delay(3_000)
-                        MusicLauncher.play(applicationContext)
+                        MusicLauncher.openAndPlay(applicationContext, Settings(applicationContext))
                     }
                     ACTION_POWER_OFF -> controller.powerOff(report)
                     ACTION_UNLINK -> {
@@ -89,6 +89,25 @@ class PartyService : Service() {
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
+    }
+
+    /**
+     * Patiente le temps que le Bluetooth revienne.
+     *
+     * Le mode sommeil coupe les radios et ne les retablit qu'a son extinction :
+     * un reveil declenche trop tot trouverait le Bluetooth encore eteint.
+     */
+    private suspend fun awaitBluetooth() {
+        val manager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return
+        val deadline = System.currentTimeMillis() + Config.BLUETOOTH_WAIT_MS
+        while (System.currentTimeMillis() < deadline) {
+            if (manager.adapter?.isEnabled == true) {
+                // Laisser la pile finir de s'initialiser avant de solliciter les enceintes.
+                kotlinx.coroutines.delay(Config.BLUETOOTH_SETTLE_MS)
+                return
+            }
+            kotlinx.coroutines.delay(2_000)
+        }
     }
 
     /** Notification persistante decrivant l'echec, avec l'enceinte en cause. */
@@ -192,5 +211,7 @@ data class UiState(
     val step: Step,
     val error: String? = null,
     /** Precision affichee a cote de l'etat quand la sequence a abouti partiellement. */
-    val warning: String? = null
+    val warning: String? = null,
+    /** Nom de l'enceinte concernee, insere dans le libelle de l'etape. */
+    val subject: String? = null
 )

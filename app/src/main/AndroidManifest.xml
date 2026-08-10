@@ -22,6 +22,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Controle des nouvelles versions publiees sur le depot. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Installation de la mise a jour, apres confirmation de l'utilisateur. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!--
         Depuis Android 13, aucune notification ne s'affiche sans cette
         autorisation : ni celle du service, ni l'alerte en cas d'echec.
@@ -167,6 +169,17 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <!-- Partage du fichier telecharge avec l'installateur du systeme. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <service
             android:name=".PartyService"

@@ -27,10 +27,16 @@ object UpdateChecker {
     private const val RELEASES_PAGE =
         "https://github.com/louim-lbs/PartyPair/releases/latest"
 
+    /** Page a ouvrir quand le telechargement automatique n'est pas possible. */
+    fun releasesPage(): String = RELEASES_PAGE
+
     private const val CHANNEL_ID = "updates"
     private const val NOTIFICATION_ID = 3
 
     private val INTERVAL_MS = TimeUnit.DAYS.toMillis(1)
+
+    /** Version publiee, avec l'adresse de son APK quand il y en a un. */
+    data class Release(val version: String, val apkUrl: String?)
 
     /** Interroge le depot au plus une fois par jour, en silence en cas d'echec. */
     suspend fun checkQuietly(context: Context) {
@@ -39,13 +45,54 @@ object UpdateChecker {
         if (now - settings.lastUpdateCheck < INTERVAL_MS) return
         settings.lastUpdateCheck = now
 
-        val latest = withContext(Dispatchers.IO) { fetchLatestVersion() } ?: return
-        if (isNewer(latest, BuildConfig.VERSION_NAME)) {
-            notify(context, latest)
+        val release = withContext(Dispatchers.IO) { fetchLatest() } ?: return
+        if (isNewer(release.version, BuildConfig.VERSION_NAME)) {
+            notify(context, release.version)
         }
     }
 
-    private fun fetchLatestVersion(): String? = runCatching {
+    /**
+     * Verification demandee explicitement : ignore le delai d'un jour et rend
+     * compte du resultat, y compris quand tout est deja a jour.
+     */
+    suspend fun checkNow(context: Context): Release? {
+        Settings(context).lastUpdateCheck = System.currentTimeMillis()
+        val release = withContext(Dispatchers.IO) { fetchLatest() } ?: return null
+        return release.takeIf { isNewer(it.version, BuildConfig.VERSION_NAME) }
+    }
+
+    /**
+     * Telecharge l'APK et ouvre l'installateur du systeme.
+     *
+     * Android n'autorise pas une application a en installer une autre sans
+     * l'accord explicite de l'utilisateur : on prepare le fichier, il confirme.
+     */
+    suspend fun downloadAndInstall(context: Context, apkUrl: String): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val target = java.io.File(context.getExternalFilesDir(null), "party-pair.apk")
+                (URL(apkUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15_000
+                    readTimeout = 60_000
+                    instanceFollowRedirects = true
+                }.inputStream.use { input ->
+                    target.outputStream().use { output -> input.copyTo(output) }
+                }
+
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context, "${context.packageName}.updates", target
+                )
+                val install = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(install)
+                true
+            }.getOrDefault(false)
+        }
+
+    private fun fetchLatest(): Release? = runCatching {
         val connection = (URL(RELEASES_API).openConnection() as HttpURLConnection).apply {
             connectTimeout = 8_000
             readTimeout = 8_000
@@ -54,7 +101,22 @@ object UpdateChecker {
         try {
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
             val body = connection.inputStream.bufferedReader().use { it.readText() }
-            JSONObject(body).optString("tag_name").trimStart('v', 'V').takeIf { it.isNotBlank() }
+            val json = JSONObject(body)
+            val version = json.optString("tag_name").trimStart('v', 'V')
+            if (version.isBlank()) return null
+
+            val assets = json.optJSONArray("assets")
+            var apkUrl: String? = null
+            if (assets != null) {
+                for (i in 0 until assets.length()) {
+                    val asset = assets.optJSONObject(i) ?: continue
+                    if (asset.optString("name").endsWith(".apk", ignoreCase = true)) {
+                        apkUrl = asset.optString("browser_download_url").takeIf { it.isNotBlank() }
+                        break
+                    }
+                }
+            }
+            Release(version, apkUrl)
         } finally {
             connection.disconnect()
         }

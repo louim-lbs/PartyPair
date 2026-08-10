@@ -112,6 +112,7 @@ class MainActivity : ComponentActivity() {
                     var musicApp by remember { mutableStateOf(settings.musicApp) }
                     // Annuler n'a de sens que si une configuration existe deja.
                     var reconfiguring by remember { mutableStateOf(false) }
+                    var updateStatus by remember { mutableStateOf<String?>(null) }
 
                     when {
                         !permissionGranted -> PermissionScreen(onRetry = ::askPermission)
@@ -141,6 +142,8 @@ class MainActivity : ComponentActivity() {
                             onSwapChannels = {
                                 PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
                             },
+                            onCheckUpdate = { checkUpdate { updateStatus = it } },
+                            updateStatus = updateStatus,
                             onExport = ::exportSetup,
                             onImport = {
                                 if (importSetup()) {
@@ -165,7 +168,7 @@ class MainActivity : ComponentActivity() {
                             settings = settings,
                             musicApp = musicApp,
                             onPress = ::togglePower,
-                            onOpenMusic = { MusicLauncher.open(this, settings) },
+                            onOpenMusic = ::playMusic,
                             onPickMusic = { screen = Screen.MUSIC_PICKER },
                             onSettings = { screen = Screen.SETTINGS },
                             onCycleBass = ::cycleBassBoost,
@@ -198,6 +201,35 @@ class MainActivity : ComponentActivity() {
             PartyService.start(this, PartyService.ACTION_APPLY_BASS)
         }
         return next
+    }
+
+    /**
+     * Verifie la presence d'une nouvelle version, et la telecharge le cas echeant.
+     * Le compte rendu passe par le rappel, pour s'afficher sous le bouton.
+     */
+    private fun checkUpdate(report: (String?) -> Unit) {
+        report(getString(R.string.update_checking))
+        lifecycleScope.launch {
+            val release = runCatching { UpdateChecker.checkNow(this@MainActivity) }
+                .getOrNull()
+            when {
+                release == null -> report(getString(R.string.update_none))
+                release.apkUrl == null -> {
+                    report(getString(R.string.update_found, release.version))
+                    openUrl(UpdateChecker.releasesPage())
+                }
+                else -> {
+                    report(getString(R.string.update_downloading))
+                    val ok = UpdateChecker.downloadAndInstall(this@MainActivity, release.apkUrl)
+                    if (!ok) {
+                        report(getString(R.string.update_failed))
+                        openUrl(UpdateChecker.releasesPage())
+                    } else {
+                        report(null)
+                    }
+                }
+            }
+        }
     }
 
     /** Copie la configuration dans le presse-papiers. */
@@ -233,6 +265,13 @@ class MainActivity : ComponentActivity() {
     /** Propose d'allumer le Bluetooth plutot que de se contenter de le signaler. */
     private fun askEnableBluetooth() {
         runCatching { enableBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
+    }
+
+    /** Ouvre l'application musicale puis lance la lecture. */
+    private fun playMusic() {
+        lifecycleScope.launch {
+            MusicLauncher.openAndPlay(this@MainActivity, Settings(this@MainActivity))
+        }
     }
 
     private fun setSleepTimer(minutes: Int?) {
@@ -475,7 +514,7 @@ private fun PartyScreen(
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = (state.error ?: stringResource(state.step.label)).uppercase(),
+                text = (state.error ?: stringResource(state.step.label, state.subject.orEmpty())).uppercase(),
                 style = Silkscreen,
                 color = if (state.step == Step.FAILED) Party.Orange else Party.Silkscreen,
                 textAlign = TextAlign.Center
