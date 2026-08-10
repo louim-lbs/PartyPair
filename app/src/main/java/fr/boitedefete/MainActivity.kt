@@ -60,10 +60,14 @@ import fr.boitedefete.ui.Party
 import fr.boitedefete.ui.SetupScreen
 import fr.boitedefete.ui.SleepDialog
 import fr.boitedefete.ui.SettingsScreen
+import fr.boitedefete.ui.UpdateStatus
 import fr.boitedefete.ui.Silkscreen
 
 /** Taille du titre, identique sur tous les ecrans. */
 private val TITLE_SIZE = 24.sp
+
+/** Hauteur reservee au libelle d'etat, pour que la mise en page ne bouge pas. */
+private val STATUS_HEIGHT = 56.dp
 
 private enum class Screen { PARTY, SETUP, SETTINGS, MUSIC_PICKER }
 
@@ -112,7 +116,7 @@ class MainActivity : ComponentActivity() {
                     var musicApp by remember { mutableStateOf(settings.musicApp) }
                     // Annuler n'a de sens que si une configuration existe deja.
                     var reconfiguring by remember { mutableStateOf(false) }
-                    var updateStatus by remember { mutableStateOf<String?>(null) }
+                    var updateStatus by remember { mutableStateOf<UpdateStatus?>(null) }
 
                     when {
                         !permissionGranted -> PermissionScreen(onRetry = ::askPermission)
@@ -151,7 +155,8 @@ class MainActivity : ComponentActivity() {
                                     screen = Screen.PARTY
                                 }
                             },
-                            onBack = { screen = Screen.PARTY }
+                            // Repartir d'une page vierge au retour suivant.
+                            onBack = { updateStatus = null; screen = Screen.PARTY }
                         )
 
                         screen == Screen.MUSIC_PICKER -> MusicAppPicker(
@@ -207,25 +212,24 @@ class MainActivity : ComponentActivity() {
      * Verifie la presence d'une nouvelle version, et la telecharge le cas echeant.
      * Le compte rendu passe par le rappel, pour s'afficher sous le bouton.
      */
-    private fun checkUpdate(report: (String?) -> Unit) {
-        report(getString(R.string.update_checking))
+    private fun checkUpdate(report: (UpdateStatus?) -> Unit) {
+        report(UpdateStatus(getString(R.string.update_checking)))
         lifecycleScope.launch {
-            val release = runCatching { UpdateChecker.checkNow(this@MainActivity) }
-                .getOrNull()
+            val release = runCatching { UpdateChecker.checkNow(this@MainActivity) }.getOrNull()
             when {
-                release == null -> report(getString(R.string.update_none))
+                release == null -> report(UpdateStatus(getString(R.string.update_none)))
                 release.apkUrl == null -> {
-                    report(getString(R.string.update_found, release.version))
+                    report(UpdateStatus(getString(R.string.update_found, release.version), true))
                     openUrl(UpdateChecker.releasesPage())
                 }
                 else -> {
-                    report(getString(R.string.update_downloading))
+                    report(UpdateStatus(getString(R.string.update_downloading), true))
                     val ok = UpdateChecker.downloadAndInstall(this@MainActivity, release.apkUrl)
-                    if (!ok) {
-                        report(getString(R.string.update_failed))
-                        openUrl(UpdateChecker.releasesPage())
-                    } else {
+                    if (ok) {
                         report(null)
+                    } else {
+                        report(UpdateStatus(getString(R.string.update_failed), true))
+                        openUrl(UpdateChecker.releasesPage())
                     }
                 }
             }
@@ -415,6 +419,7 @@ private fun PartyScreen(
 
     val progress = when (state.step) {
         Step.IDLE, Step.FAILED -> 0f
+        Step.CHECKING -> 0.1f
         Step.WAKING_SECONDARY -> 0.25f
         Step.WAKING_PRIMARY -> 0.5f
         Step.LINKING -> 0.75f
@@ -513,12 +518,22 @@ private fun PartyScreen(
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = (state.error ?: stringResource(state.step.label, state.subject.orEmpty())).uppercase(),
-                style = Silkscreen,
-                color = if (state.step == Step.FAILED) Party.Orange else Party.Silkscreen,
-                textAlign = TextAlign.Center
-            )
+            // Hauteur figee : sans elle, un libelle passant sur deux lignes
+            // repousserait le haut-parleur vers le haut a chaque changement d'etat.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(STATUS_HEIGHT),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Text(
+                    text = (state.error
+                        ?: stringResource(state.step.label, state.subject.orEmpty())).uppercase(),
+                    style = Silkscreen,
+                    color = if (state.step == Step.FAILED) Party.Orange else Party.Silkscreen,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             if (!bluetoothReady) {
                 Spacer(Modifier.height(6.dp))

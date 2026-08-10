@@ -17,6 +17,7 @@ import kotlin.math.max
 /** Etapes de la sequence. Le libelle suit la langue du telephone. */
 enum class Step(@StringRes val label: Int) {
     IDLE(R.string.step_idle),
+    CHECKING(R.string.step_checking),
     WAKING_SECONDARY(R.string.step_waking_named),
     WAKING_PRIMARY(R.string.step_waking_named),
     LINKING(R.string.step_linking),
@@ -51,13 +52,13 @@ class PartyController(private val context: Context) {
         // L'enceinte secondaire peut etre debranchee ou hors de portee. Dans ce
         // cas on continue avec la principale : de la musique sur une enceinte
         // vaut mieux que le silence sur deux.
-        subject = secondaryDevice.name
+        subject = Elision.of(secondaryDevice.name)
         onStep(Step.WAKING_SECONDARY)
         val secondary = runCatching { connect(adapter, secondaryDevice) }.getOrNull()
         secondary?.awaitReady(Config.READY_TIMEOUT_MS)
 
         try {
-            subject = primaryDevice.name
+            subject = Elision.of(primaryDevice.name)
             onStep(Step.WAKING_PRIMARY)
             val primary = connect(adapter, primaryDevice)
 
@@ -93,17 +94,24 @@ class PartyController(private val context: Context) {
                 applyVolume(primary)
                 applyBassBoost(primary)
 
+                var audioConnected = true
                 if (phoneMac.isNotBlank()) {
                     onStep(Step.CONNECTING_AUDIO)
-                    awaitAudio(adapter) {
+                    audioConnected = awaitAudio(adapter) {
                         runCatching { primary.write(JblProtocol.connectTo(phoneMac)) }
                     }
                 }
 
-                if (secondary == null) {
-                    warning = context.getString(
+                warning = when {
+                    secondary == null -> context.getString(
                         R.string.warning_alone, secondaryDevice.name, primaryDevice.name
                     )
+                    // L'enceinte ne s'est pas presentee au telephone : sans ce
+                    // message, on chercherait longtemps pourquoi le son ne sort pas.
+                    !audioConnected -> context.getString(
+                        R.string.warning_no_audio, primaryDevice.name
+                    )
+                    else -> null
                 }
                 onStep(Step.READY)
             } finally {
@@ -136,6 +144,11 @@ class PartyController(private val context: Context) {
      * debranchee. Se fier a cette memoire ferait eteindre au lieu d'apparier.
      */
     suspend fun toggle(onStep: (Step) -> Unit) {
+        // Signale l'action sans attendre : verifier l'etat demande une connexion
+        // BLE de plusieurs secondes, pendant lesquelles l'ecran resterait muet
+        // et donnerait envie d'appuyer une seconde fois.
+        onStep(Step.CHECKING)
+
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val adapter = adapter()
@@ -385,20 +398,21 @@ class PartyController(private val context: Context) {
      * Attend que l'enceinte principale rejoigne le telephone en audio,
      * en relancant l'invitation a mi-parcours si rien ne vient.
      */
-    private suspend fun awaitAudio(adapter: BluetoothAdapter, retry: () -> Unit) {
+    private suspend fun awaitAudio(adapter: BluetoothAdapter, retry: () -> Unit): Boolean {
         val deadline = System.currentTimeMillis() + Config.AUDIO_TIMEOUT_MS
         val halfway = System.currentTimeMillis() + Config.AUDIO_TIMEOUT_MS / 2
         var retried = false
         while (System.currentTimeMillis() < deadline) {
             if (adapter.getProfileConnectionState(BluetoothProfile.A2DP) ==
                 BluetoothProfile.STATE_CONNECTED
-            ) return
+            ) return true
             if (!retried && System.currentTimeMillis() > halfway) {
                 retried = true
                 retry()
             }
             delay(800)
         }
+        return false
     }
 
     private fun adapter(): BluetoothAdapter {

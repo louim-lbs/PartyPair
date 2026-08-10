@@ -54,6 +54,17 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_MUSIC_URL, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_MUSIC_URL, value.trim()).apply()
 
+    /**
+     * Nom de la playlist a jouer.
+     *
+     * Transmis a l'application musicale par une recherche lancee, la seule
+     * interface publique qui demarre vraiment la lecture demandee. Un lien
+     * ouvre la playlist mais ne la joue pas forcement.
+     */
+    var playlistName: String
+        get() = prefs.getString(KEY_PLAYLIST_NAME, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_PLAYLIST_NAME, value.trim()).apply()
+
     /** Volume applique au reveil, de 0 a 32. Negatif signifie « ne pas toucher ». */
     var wakeVolume: Int
         get() = prefs.getInt(KEY_WAKE_VOLUME, DEFAULT_WAKE_VOLUME)
@@ -141,6 +152,7 @@ class Settings(context: Context) {
         if (phoneMac.isNotBlank()) add("telephone=$phoneMac")
         musicApp?.let { add("musique=$it") }
         if (musicUrl.isNotBlank()) add("playlist=$musicUrl")
+        if (playlistName.isNotBlank()) add("nom_playlist=$playlistName")
         add("volume=$wakeVolume")
         add("equilibre=$balance")
         add("graves=$bassBoost")
@@ -162,6 +174,7 @@ class Settings(context: Context) {
                 "telephone" -> phoneMac = value
                 "musique" -> musicApp = value.trim()
                 "playlist" -> musicUrl = value
+                "nom_playlist" -> playlistName = value
                 "volume" -> value.trim().toIntOrNull()?.let { wakeVolume = it }
                 "equilibre" -> value.trim().toIntOrNull()?.let { balance = it }
                 "graves" -> value.trim().toIntOrNull()?.let { bassBoost = it }
@@ -210,6 +223,7 @@ class Settings(context: Context) {
         private const val KEY_PHONE_MAC = "phone_mac"
         private const val KEY_MUSIC_APP = "music_app"
         private const val KEY_MUSIC_URL = "music_url"
+        private const val KEY_PLAYLIST_NAME = "playlist_name"
         private const val KEY_WAKE_VOLUME = "wake_volume"
         private const val KEY_LAST_VOLUME = "last_volume"
         private const val KEY_ALARM_ENABLED = "alarm_enabled"

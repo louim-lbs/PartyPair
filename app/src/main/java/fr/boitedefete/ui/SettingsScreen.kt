@@ -51,7 +51,7 @@ fun SettingsScreen(
     onExport: () -> Unit,
     onImport: () -> Unit,
     onCheckUpdate: () -> Unit,
-    updateStatus: String?,
+    updateStatus: UpdateStatus?,
     onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
@@ -59,6 +59,7 @@ fun SettingsScreen(
 
     var volume by remember { mutableFloatStateOf(settings.wakeVolume.toFloat()) }
     var url by remember { mutableStateOf(settings.musicUrl) }
+    var playlistName by remember { mutableStateOf(settings.playlistName) }
     var balance by remember { mutableFloatStateOf(settings.balance.toFloat()) }
     var fromHour by remember { mutableFloatStateOf(settings.alarmFromHour.toFloat()) }
     var toHour by remember { mutableFloatStateOf(settings.alarmToHour.toFloat()) }
@@ -143,6 +144,21 @@ fun SettingsScreen(
             color = Party.Muted
         )
 
+        Spacer(Modifier.height(14.dp))
+        OutlinedTextField(
+            value = playlistName,
+            onValueChange = { playlistName = it; settings.playlistName = it },
+            label = { Text(stringResource(R.string.playlist_name), color = Party.Muted) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.playlist_name_hint),
+            style = Body.copy(fontSize = 13.sp),
+            color = Party.Muted
+        )
+
         Section(stringResource(R.string.section_alarm))
         Text(
             stringResource(R.string.alarm_window, fromHour.toInt(), toHour.toInt()),
@@ -186,7 +202,11 @@ fun SettingsScreen(
         Spacer(Modifier.height(14.dp))
         Entry(stringResource(R.string.check_update), onClick = onCheckUpdate)
         updateStatus?.let {
-            Text(it, style = Body.copy(fontSize = 13.sp), color = Party.Orange)
+            Text(
+                it.text,
+                style = Body.copy(fontSize = 13.sp),
+                color = if (it.actionable) Party.Orange else Party.Muted
+            )
         }
         Entry(stringResource(R.string.info_repo)) { onOpenUrl(REPO_URL) }
         Entry(stringResource(R.string.info_issues)) { onOpenUrl(ISSUES_URL) }
@@ -235,6 +255,9 @@ private fun balanceLabel(settings: Settings, value: Int): String = when {
         settings.primary?.name.orEmpty()
     )
 }
+
+/** Compte rendu d'une verification de version. */
+data class UpdateStatus(val text: String, val actionable: Boolean = false)
 
 @Composable
 private fun Section(title: String) {
