@@ -117,4 +117,7 @@
     <string name="standby_confirm_yes">Sleep</string>
     <string name="standby_confirm_no">Keep playing</string>
     <string name="dont_ask_again">Do not ask again</string>
+    <string name="channel_updates">Updates</string>
+    <string name="update_title">Version %1$s is available</string>
+    <string name="update_body">Tap to open the release page.</string>
 </resources>

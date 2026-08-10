@@ -89,7 +89,10 @@ class MainActivity : ComponentActivity() {
         // L'etat vit en memoire : au retour dans l'application, il faut verifier
         // que les enceintes ne sont pas deja en service.
         if (permissionGranted) {
-            lifecycleScope.launch { PartyService.refreshState(this@MainActivity) }
+            lifecycleScope.launch {
+                PartyService.refreshState(this@MainActivity)
+                UpdateChecker.checkQuietly(this@MainActivity)
+            }
         }
     }
 
@@ -211,7 +214,7 @@ class MainActivity : ComponentActivity() {
         val clipboard = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager
         val text = clipboard?.primaryClip?.takeIf { it.itemCount > 0 }
             ?.getItemAt(0)?.coerceToText(this)?.toString()
-        val restored = !text.isNullOrBlank() && Settings(this).import(text)
+        val restored = !text.isNullOrBlank() && Settings(this).restore(text)
         Toast.makeText(
             this,
             if (restored) R.string.backup_restored else R.string.backup_invalid,
@@ -274,14 +277,28 @@ class MainActivity : ComponentActivity() {
      * Depuis Android 12, parler aux enceintes et les chercher sont deux
      * permissions distinctes. Avant, la recherche BLE passait par la position.
      */
-    private fun neededPermissions(): Array<String> =
+    private fun neededPermissions(): Array<String> = buildList {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN)
+            add(Manifest.permission.BLUETOOTH_CONNECT)
+            add(Manifest.permission.BLUETOOTH_SCAN)
         } else {
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
+        // Sans elle, ni la notification du service ni l'alerte d'echec
+        // n'apparaissent sur Android 13 et au-dela.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }.toTypedArray()
 
-    private fun hasPermission(): Boolean = neededPermissions().all {
+    /**
+     * Les notifications ne sont pas indispensables au fonctionnement : leur
+     * refus ne doit pas bloquer l'application.
+     */
+    private fun essentialPermissions(): Array<String> =
+        neededPermissions().filter { it != Manifest.permission.POST_NOTIFICATIONS }.toTypedArray()
+
+    private fun hasPermission(): Boolean = essentialPermissions().all {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
     }
 

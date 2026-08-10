@@ -112,4 +112,7 @@
     <string name="standby_confirm_yes">Mettre en veille</string>
     <string name="standby_confirm_no">Continuer</string>
     <string name="dont_ask_again">Ne plus demander</string>
+    <string name="channel_updates">Mises à jour</string>
+    <string name="update_title">La version %1$s est disponible</string>
+    <string name="update_body">Touchez pour ouvrir la page de publication.</string>
 </resources>

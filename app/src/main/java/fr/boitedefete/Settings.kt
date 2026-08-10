@@ -87,6 +87,11 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_BASS_BOOST, 0)
         set(value) = prefs.edit().putInt(KEY_BASS_BOOST, value.coerceIn(0, 2)).apply()
 
+    /** Date du dernier controle de mise a jour, pour ne pas interroger le depot a chaque ouverture. */
+    var lastUpdateCheck: Long
+        get() = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, value).apply()
+
     /** Confirmation avant la mise en veille, pour parer un appui accidentel. */
     var confirmStandby: Boolean
         get() = prefs.getBoolean(KEY_CONFIRM_STANDBY, true)
@@ -131,7 +136,7 @@ class Settings(context: Context) {
      *
      * @return vrai si au moins une enceinte a ete reconnue.
      */
-    fun import(text: String): Boolean {
+    fun restore(text: String): Boolean {
         var recognized = false
         text.lineSequence().forEach { line ->
             val (key, value) = line.split("=", limit = 2).takeIf { it.size == 2 } ?: return@forEach
@@ -197,6 +202,7 @@ class Settings(context: Context) {
         private const val KEY_BASS_BOOST = "bass_boost"
         private const val KEY_SLEEP_AT = "sleep_at"
         private const val KEY_CONFIRM_STANDBY = "confirm_standby"
+        private const val KEY_LAST_UPDATE_CHECK = "last_update_check"
         private const val KEY_PRIMARY_CHANNEL = "primary_channel"
         private const val KEY_SECONDARY_CHANNEL = "secondary_channel"
 

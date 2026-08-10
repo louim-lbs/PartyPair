@@ -201,7 +201,7 @@ class SpeakerLink private constructor(
  * passage celles qui nous serviront plus tard, plutot que de compter sur un
  * abonnement pose a temps.
  */
-private class Inbox {
+internal class Inbox {
 
     val flow = MutableSharedFlow<ByteArray>(
         extraBufferCapacity = 32,
