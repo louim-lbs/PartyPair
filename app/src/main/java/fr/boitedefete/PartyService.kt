@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger
   buildNotification(getString(R.string.app_name))
   )
 
-  ```
    val action = intent?.action ?: ACTION_START
 
    // Les reglages rapides sont courts et sans effet de bord : les ecarter
@@ -108,7 +107,6 @@ import java.util.concurrent.atomic.AtomicInteger
    }
 
    return START_NOT_STICKY
-  ```
 
   }
 
@@ -128,7 +126,6 @@ import java.util.concurrent.atomic.AtomicInteger
     return scope.launch(Dispatchers.IO) {
     val controller = PartyController(applicationContext)
 
-    ```
      try {
          block(controller)
      } catch (e: Exception) {
@@ -144,7 +141,6 @@ import java.util.concurrent.atomic.AtomicInteger
              stopSelf()
          }
      }
-    ```
 
     }
     }
@@ -175,9 +171,7 @@ import java.util.concurrent.atomic.AtomicInteger
     return
     }
 
-    ```
      kotlinx.coroutines.delay(2_000)
-    ```
 
     }
     }
@@ -187,7 +181,6 @@ import java.util.concurrent.atomic.AtomicInteger
   val manager =
   getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-  ```
    ensureChannel(manager)
 
    val open = PendingIntent.getActivity(
@@ -209,7 +202,6 @@ import java.util.concurrent.atomic.AtomicInteger
    runCatching {
        manager.notify(FAILURE_NOTIFICATION_ID, notification)
    }
-  ```
 
   }
 
@@ -217,12 +209,10 @@ import java.util.concurrent.atomic.AtomicInteger
   val manager =
   getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-  ```
    manager.notify(
        NOTIFICATION_ID,
        buildNotification(text)
    )
-  ```
 
   }
 
@@ -243,20 +233,17 @@ import java.util.concurrent.atomic.AtomicInteger
   getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
   )
 
-  ```
    return Notification.Builder(this, CHANNEL_ID)
        .setContentTitle(getString(R.string.app_name))
        .setContentText(text)
        .setSmallIcon(R.drawable.ic_driver)
        .setOngoing(true)
        .build()
-  ```
 
   }
 
   companion object {
 
-  ```
    const val ACTION_START = "fr.boitedefete.action.START"
    const val ACTION_UNLINK = "fr.boitedefete.action.UNLINK"
    const val ACTION_POWER_OFF = "fr.boitedefete.action.POWER_OFF"
@@ -343,7 +330,6 @@ import java.util.concurrent.atomic.AtomicInteger
            context.startForegroundService(intent)
        }.isSuccess
    }
-  ```
 
   }
   }
