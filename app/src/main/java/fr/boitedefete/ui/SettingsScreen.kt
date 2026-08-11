@@ -322,7 +322,7 @@ fun SettingsScreen(
         InfoRow(stringResource(R.string.info_license), "MIT")
 
         Spacer(Modifier.height(14.dp))
-        Entry(stringResource(R.string.check_update), onClick = onCheckUpdate)
+            Entry(stringResource(R.string.check_update), onClick = onCheckUpdate)
         updateStatus?.let { status ->
             Text(
                 status.text,
@@ -415,13 +415,16 @@ private fun EntryWithIcon(label: String, packageName: String?, onClick: () -> Un
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(vertical = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (icon != null) {
-            Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(26.dp))
-            Spacer(Modifier.width(12.dp))
-        }
         Text(label, style = Body.copy(fontSize = 16.sp), color = LocalAccent.current)
+        // A droite : l'icone se lit comme la valeur du reglage, a la maniere
+        // des autres lignes qui portent leur valeur de ce cote.
+        if (icon != null) {
+            Spacer(Modifier.width(12.dp))
+            Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(26.dp))
+        }
     }
 }
 

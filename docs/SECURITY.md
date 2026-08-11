@@ -2,7 +2,7 @@
 
 An audit of everything Party Pair exposes to the outside world, what it asks of the system, and what it does with your data.
 
-Last reviewed for version 1.0.3.
+Last reviewed for version 1.0.4.
 
 ---
 
