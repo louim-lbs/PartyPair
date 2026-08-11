@@ -249,6 +249,10 @@ fun SettingsScreen(
             )
         }
 
+        // Les pastilles portent deja leur propre marge : sans ce repos, la
+        // legende venait se coller a leur bord inferieur.
+        Spacer(Modifier.height(10.dp))
+
         if (customPicker) {
             ColorPickerDialog(
                 initial = parseHex(currentAccent) ?: Party.Orange,

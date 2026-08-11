@@ -529,6 +529,14 @@ private fun PartyScreen(
     var sleepDialog by remember { mutableStateOf(false) }
     var standbyDialog by remember { mutableStateOf(false) }
 
+    // Des que les enceintes sont pretes, on prepare la liaison : le premier
+    // reglage rapide sera alors immediat, et surtout il aboutira.
+    LaunchedEffect(state.step) {
+        if (state.step == Step.READY) {
+            PartyService.start(context, PartyService.ACTION_WARM_UP)
+        }
+    }
+
     // La proposition vit dans le service, pas dans cet ecran : un aller-retour
     // dans les reglages detruirait l'etat local et relancerait le decompte.
     val promptPending by PartyService.musicPrompt.collectAsState()

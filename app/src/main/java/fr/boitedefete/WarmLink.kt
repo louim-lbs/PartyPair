@@ -40,6 +40,10 @@ object WarmLink {
         }.also {
             link = it
             mac = device.mac
+            // Une enceinte accepte la connexion avant d'etre prete a traiter les
+            // commandes : sans cette attente, la toute premiere ecriture se perd.
+            // Sur une liaison deja etablie, la question ne se pose plus.
+            it.awaitReady(Config.READY_TIMEOUT_MS)
         }
 
         runCatching { block(active) }.getOrElse { error ->
