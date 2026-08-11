@@ -36,6 +36,9 @@ object Config {
     const val FADE_STEPS = 20
     const val FADE_STEP_MS = 90L
 
+    /** Repit avant de restituer le volume du telephone, une fois l'enceinte eteinte. */
+    const val RESTORE_DELAY_MS = 1_200L
+
     /** Paliers de la montee du volume au reveil, pour eviter un claquement. */
     const val FADE_IN_STEPS = 6
     const val FADE_IN_STEP_MS = 120L

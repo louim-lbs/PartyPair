@@ -234,6 +234,9 @@ class PartyController(private val context: Context) {
         onStep(Step.FADING_OUT)
         fadeOut(primary)
         primary.write(JblProtocol.POWER_OFF)
+        // Une fois l'enceinte eteinte : remonter le volume avant l'aurait rendu
+        // audible, ce qui est exactement ce que le fondu cherchait a eviter.
+        delay(Config.RESTORE_DELAY_MS)
         restorePhoneVolume()
         onStep(Step.IDLE)
     }
@@ -279,9 +282,21 @@ class PartyController(private val context: Context) {
         if (start <= 0) return false
 
         settings.lastPhoneVolume = start
+        var previous = start
         for (i in 1..Config.FADE_STEPS) {
             val level = start - start * i / Config.FADE_STEPS
-            runCatching { audio.setStreamVolume(AudioManager.STREAM_MUSIC, level, 0) }
+            // Ni remontee, ni palier redondant : on n'ecrit qu'en descendant.
+            if (level >= previous) continue
+            val ok = runCatching {
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, level, 0)
+            }.isSuccess
+            if (!ok) {
+                // Volume verrouille : la descente n'aura pas lieu par cette voie,
+                // et il ne faut surtout pas restituer un niveau jamais abaisse.
+                settings.lastPhoneVolume = 0
+                return false
+            }
+            previous = level
             delay(Config.FADE_STEP_MS)
         }
         return true
@@ -289,27 +304,30 @@ class PartyController(private val context: Context) {
 
     /** Restitue le volume du telephone, une fois les enceintes eteintes. */
     private fun restorePhoneVolume() {
+        // Efface d'abord : un echec ne doit pas laisser une valeur qui serait
+        // restituee a contretemps au prochain appel.
         val level = settings.lastPhoneVolume.takeIf { it > 0 } ?: return
+        settings.lastPhoneVolume = 0
         val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
         runCatching { audio.setStreamVolume(AudioManager.STREAM_MUSIC, level, 0) }
-        settings.lastPhoneVolume = 0
     }
 
     /** Repli quand le telephone n'est pas la source : on passe par le protocole. */
     private suspend fun fadeUsingBluetooth(primary: SpeakerLink) {
-        // Ici le niveau doit etre lu, faute de mieux : le deduire risquerait de
-        // le surestimer et de faire monter le son.
-        val start = primary.readVolume(Config.VOLUME_READ_MS)
-            ?: settings.lastVolume.takeIf { it > 0 }
-            ?: return
+        // Le niveau doit etre lu : le deduire risquerait de le surestimer, et
+        // le premier palier ferait alors monter le son.
+        val start = primary.readVolume(Config.VOLUME_READ_MS) ?: return
         if (start <= 0) return
         settings.lastVolume = start
 
         // Interpolation plutot que decrement fixe : la descente reste reguliere
         // quel que soit le niveau de depart, et atteint exactement zero.
         val balanced = settings.balance != 0
+        var previous = start
         for (i in 1..Config.FADE_STEPS) {
             val level = start - start * i / Config.FADE_STEPS
+            if (level >= previous) continue
+            previous = level
             primary.write(JblProtocol.setVolume(level))
             if (balanced) {
                 // Les niveaux par enceinte ne suivent pas le volume general :
@@ -329,6 +347,10 @@ class PartyController(private val context: Context) {
      * depasser le niveau demande.
      */
     private suspend fun applyVolume(primary: SpeakerLink) {
+        // Le fondu precedent a peut-etre laisse le telephone au minimum :
+        // le restituer avant de regler l'enceinte, sinon rien ne sortira.
+        restorePhoneVolume()
+
         val wanted = when {
             settings.wakeVolume >= 0 -> settings.wakeVolume
             settings.lastVolume >= 0 -> settings.lastVolume
