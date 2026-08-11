@@ -3,6 +3,9 @@ package fr.boitedefete.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -55,6 +58,8 @@ fun SettingsScreen(
     notificationsAllowed: Boolean,
     onOpenNotificationSettings: () -> Unit,
     onLanguage: (String) -> Unit,
+    onAccent: (String) -> Unit,
+    currentAccent: String,
     currentLanguage: String,
     updateStatus: UpdateStatus?,
     onBack: () -> Unit
@@ -190,6 +195,34 @@ fun SettingsScreen(
             color = Party.Muted
         )
 
+        Section(stringResource(R.string.section_accent))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            val choices = buildList {
+                if (dynamicAccent() != null) add(Settings.ACCENT_DYNAMIC to dynamicAccent()!!)
+                ACCENTS.forEach { (name, color) -> add(name to color) }
+            }
+            choices.forEach { (name, color) ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(4.dp)
+                        .height(44.dp)
+                        .background(color, CircleShape)
+                        .border(
+                            width = if (currentAccent == name) 3.dp else 0.dp,
+                            color = Party.Silkscreen,
+                            shape = CircleShape
+                        )
+                        .clickable { onAccent(name) }
+                )
+            }
+        }
+        Text(
+            stringResource(R.string.accent_hint),
+            style = Body.copy(fontSize = 13.sp),
+            color = Party.Muted
+        )
+
         if (AppLanguage.isSupported) {
             Section(stringResource(R.string.section_language))
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -201,7 +234,7 @@ fun SettingsScreen(
                     Text(
                         stringResource(labelRes).uppercase(),
                         style = Silkscreen.copy(fontSize = 12.sp),
-                        color = if (currentLanguage == code) Party.Orange else Party.Muted,
+                        color = if (currentLanguage == code) LocalAccent.current else Party.Muted,
                         modifier = Modifier
                             .weight(1f)
                             .clickable { onLanguage(code) }
@@ -241,7 +274,7 @@ fun SettingsScreen(
             Text(
                 status.text,
                 style = Body.copy(fontSize = 13.sp),
-                color = if (status.actionable) Party.Orange else Party.Muted,
+                color = if (status.actionable) LocalAccent.current else Party.Muted,
                 modifier = status.onClick
                     ?.let { Modifier.fillMaxWidth().clickable(onClick = it).padding(vertical = 8.dp) }
                     ?: Modifier
@@ -263,7 +296,7 @@ fun SettingsScreen(
             Text(
                 stringResource(R.string.info_back).uppercase(),
                 style = Silkscreen,
-                color = Party.Orange
+                color = LocalAccent.current
             )
         }
     }
@@ -317,7 +350,7 @@ private fun Entry(label: String, onClick: () -> Unit) {
     Text(
         label,
         style = Body.copy(fontSize = 16.sp),
-        color = Party.Orange,
+        color = LocalAccent.current,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)

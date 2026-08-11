@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Les reglages sont sauvegardes pour survivre a un changement de telephone,
+    mais le fichier d'installation telecharge, lui, n'a rien a y faire.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>

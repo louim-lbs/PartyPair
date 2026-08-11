@@ -48,7 +48,7 @@ fun ControlRow(
                 Text(
                     entry.value.uppercase(),
                     style = Silkscreen.copy(fontSize = 13.sp, letterSpacing = 1.sp),
-                    color = if (entry.active) Party.Orange else Party.Muted,
+                    color = if (entry.active) LocalAccent.current else Party.Muted,
                     textAlign = TextAlign.Center
                 )
             }

@@ -2,6 +2,7 @@ package fr.boitedefete
 
 import android.app.Activity
 import android.os.Bundle
+import kotlinx.coroutines.launch
 import android.widget.Toast
 
 /**
@@ -20,6 +21,17 @@ class TriggerActivity : Activity() {
 
         if (!Settings(this).isConfigured) {
             Toast.makeText(this, R.string.not_configured, Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        if (intent?.action == ACTION_PLAY_MUSIC) {
+            // Lancee depuis la notification du reveil : cette fenetre, meme
+            // invisible, autorise l'ouverture du lecteur.
+            MusicLauncher.setForeground(true)
+            kotlinx.coroutines.MainScope().launch {
+                MusicLauncher.openAndPlay(applicationContext, Settings(this@TriggerActivity))
+            }
             finish()
             return
         }
@@ -44,9 +56,12 @@ class TriggerActivity : Activity() {
         }
     }
 
-    private companion object {
-        const val STANDBY_ALIAS = "StandbyShortcut"
-        val KNOWN_ACTIONS = setOf(
+    companion object {
+        /** Ouvre le lecteur depuis la notification du reveil. */
+        const val ACTION_PLAY_MUSIC = "fr.boitedefete.action.PLAY_MUSIC"
+
+        private const val STANDBY_ALIAS = "StandbyShortcut"
+        private val KNOWN_ACTIONS = setOf(
             PartyService.ACTION_START,
             PartyService.ACTION_UNLINK,
             PartyService.ACTION_POWER_OFF,

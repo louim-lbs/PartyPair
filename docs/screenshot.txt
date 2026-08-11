@@ -1,0 +1,7 @@
+Drop your screenshot here as `screenshot.png`.
+
+Both READMEs point at it with a relative path, so once the file is in place
+the image shows on the repository home page and the README never needs
+touching again.
+
+This file can be deleted afterwards.

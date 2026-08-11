@@ -46,13 +46,16 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import fr.boitedefete.ui.ACCENTS
 import fr.boitedefete.ui.BoiteDeFeteTheme
+import fr.boitedefete.ui.dynamicAccent
 import fr.boitedefete.ui.Body
 import fr.boitedefete.ui.ConfirmDialog
 import fr.boitedefete.ui.ControlEntry
 import fr.boitedefete.ui.ControlRow
 import fr.boitedefete.ui.CountdownDialog
 import fr.boitedefete.ui.Display
+import fr.boitedefete.ui.LocalAccent
 import fr.boitedefete.ui.DriverButton
 import fr.boitedefete.ui.MusicAppPicker
 import fr.boitedefete.ui.MusicButton
@@ -88,8 +91,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        MusicLauncher.setForeground(false)
+    }
+
     override fun onResume() {
         super.onResume()
+        MusicLauncher.setForeground(true)
         // L'etat vit en memoire : au retour dans l'application, il faut verifier
         // que les enceintes ne sont pas deja en service.
         if (permissionGranted) {
@@ -107,7 +116,15 @@ class MainActivity : ComponentActivity() {
         if (!permissionGranted) askPermission()
 
         setContent {
-            BoiteDeFeteTheme {
+            val settingsStore = remember { Settings(this) }
+            var accentName by remember { mutableStateOf(settingsStore.accent) }
+            val dynamic = dynamicAccent()
+            val accent = when {
+                accentName == Settings.ACCENT_DYNAMIC && dynamic != null -> dynamic
+                else -> ACCENTS[accentName] ?: ACCENTS.getValue(Settings.DEFAULT_ACCENT)
+            }
+
+            BoiteDeFeteTheme(accent = accent) {
                 Surface(modifier = Modifier.fillMaxSize(), color = Party.Cabinet) {
                     val context = LocalContext.current
                     val settings = remember { Settings(context) }
@@ -157,6 +174,8 @@ class MainActivity : ComponentActivity() {
                             notificationsAllowed = SleepTimer.notificationsAllowed(context),
                             onOpenNotificationSettings = ::openNotificationSettings,
                             onLanguage = { AppLanguage.set(this, it) },
+                            onAccent = { settings.accent = it; accentName = it },
+                            currentAccent = accentName,
                             currentLanguage = AppLanguage.current(context),
                             updateStatus = updateStatus,
                             onExport = ::exportSetup,
@@ -463,7 +482,7 @@ private fun PermissionScreen(onRetry: () -> Unit) {
             Text(
                 stringResource(R.string.permission_allow).uppercase(),
                 style = Silkscreen,
-                color = Party.Orange
+                color = LocalAccent.current
             )
         }
     }
@@ -503,8 +522,8 @@ private fun PartyScreen(
 
     val progress = when (state.step) {
         Step.IDLE, Step.FAILED -> 0f
-        Step.WAKING_SECONDARY -> 0.25f
-        Step.WAKING_PRIMARY -> 0.5f
+        Step.WAKING_PRIMARY -> 0.25f
+        Step.WAKING_SECONDARY -> 0.5f
         Step.LINKING -> 0.75f
         Step.CONNECTING_AUDIO -> 0.9f
         Step.FADING_OUT, Step.POWERING_OFF -> 0.15f
@@ -612,7 +631,7 @@ private fun PartyScreen(
                     text = (state.error
                         ?: stringResource(state.step.label, state.subject.orEmpty())).uppercase(),
                     style = Silkscreen,
-                    color = if (state.step == Step.FAILED) Party.Orange else Party.Silkscreen,
+                    color = if (state.step == Step.FAILED) LocalAccent.current else Party.Silkscreen,
                     textAlign = TextAlign.Center
                 )
             }
@@ -622,7 +641,7 @@ private fun PartyScreen(
                 Text(
                     stringResource(R.string.bluetooth_enable).uppercase(),
                     style = Silkscreen.copy(fontSize = 13.sp),
-                    color = Party.Orange,
+                    color = LocalAccent.current,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .clickable(onClick = onEnableBluetooth)
@@ -635,7 +654,7 @@ private fun PartyScreen(
                 Text(
                     warning,
                     style = Body.copy(fontSize = 13.sp),
-                    color = Party.Orange,
+                    color = LocalAccent.current,
                     textAlign = TextAlign.Center
                 )
             }
@@ -688,7 +707,7 @@ private fun PartyScreen(
                 Text(
                     stringResource(R.string.alarm_permission_needed),
                     style = Body.copy(fontSize = 12.sp),
-                    color = Party.Orange,
+                    color = LocalAccent.current,
                     textAlign = TextAlign.Center
                 )
             }

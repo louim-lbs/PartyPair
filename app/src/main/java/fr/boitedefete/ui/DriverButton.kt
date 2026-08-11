@@ -68,6 +68,7 @@ fun DriverButton(
         label = "anneau"
     )
 
+    val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
 
     Canvas(
@@ -98,7 +99,7 @@ fun DriverButton(
         // Halo de veille active : signale que la paire stereo tient
         if (halo > 0f) {
             drawCircle(
-                color = Party.Orange.copy(alpha = 0.05f + halo * 0.10f),
+                color = accent.copy(alpha = 0.05f + halo * 0.10f),
                 radius = r * (0.93f + halo * 0.05f),
                 center = c
             )
@@ -108,7 +109,7 @@ fun DriverButton(
         if (sweep > 0f) {
             drawArc(
                 brush = Brush.sweepGradient(
-                    listOf(Party.Orange, Party.Orange.copy(alpha = 0.35f), Party.Orange),
+                    listOf(accent, accent.copy(alpha = 0.35f), accent),
                     center = c
                 ),
                 startAngle = -90f,
@@ -125,7 +126,7 @@ fun DriverButton(
 
         // Dome central : le seul element qui s'allume
         drawCircle(
-            color = if (active || ready) Party.Orange else Party.Edge,
+            color = if (active || ready) accent else Party.Edge,
             radius = r * (0.26f + breathe * 0.02f + halo * 0.03f),
             center = c
         )

@@ -33,8 +33,8 @@ object Config {
     const val VOLUME_READ_MS = 800L
 
     /** Paliers du fondu sonore avant la mise en veille. */
-    const val FADE_STEPS = 12
-    const val FADE_STEP_MS = 180L
+    const val FADE_STEPS = 20
+    const val FADE_STEP_MS = 90L
 
     /** Paliers de la montee du volume au reveil, pour eviter un claquement. */
     const val FADE_IN_STEPS = 6

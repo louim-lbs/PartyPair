@@ -13,7 +13,6 @@ import kotlin.coroutines.resume
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.max
 
 /** Etapes de la sequence. Le libelle suit la langue du telephone. */
 enum class Step(@StringRes val label: Int) {
@@ -253,11 +252,18 @@ class PartyController(private val context: Context) {
         if (start <= 0) return
         settings.lastVolume = start
 
-        val stepSize = max(1, start / Config.FADE_STEPS)
-        var level = start
-        while (level > 0) {
-            level = (level - stepSize).coerceAtLeast(0)
+        // Interpolation plutot que decrement fixe : la descente reste reguliere
+        // quel que soit le niveau de depart, et atteint exactement zero.
+        val balanced = settings.balance != 0
+        for (i in 1..Config.FADE_STEPS) {
+            val level = start - start * i / Config.FADE_STEPS
             primary.write(JblProtocol.setVolume(level))
+            if (balanced) {
+                // Les niveaux par enceinte ne suivent pas le volume general :
+                // sans cela, une enceinte resterait audible pendant le fondu.
+                primary.write(JblProtocol.setPrimaryVolume(level))
+                primary.write(JblProtocol.setSecondaryVolume(level))
+            }
             delay(Config.FADE_STEP_MS)
         }
     }

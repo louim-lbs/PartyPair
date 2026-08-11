@@ -29,6 +29,8 @@
         autorisation : ni celle du service, ni l'alerte en cas d'echec.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Invitation a lancer la musique au reveil, quand l'ecran est verrouille. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
@@ -46,6 +48,8 @@
 
     <application
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
@@ -76,6 +80,7 @@
                 <action android:name="fr.boitedefete.action.UNLINK" />
                 <action android:name="fr.boitedefete.action.POWER_OFF" />
                 <action android:name="fr.boitedefete.action.TOGGLE" />
+                <action android:name="fr.boitedefete.action.PLAY_MUSIC" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

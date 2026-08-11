@@ -137,4 +137,9 @@
     <string name="notifications_blocked">Les notifications sont désactivées : le décompte de la minuterie et les alertes d\'échec ne peuvent pas s\'afficher.</string>
     <string name="notifications_open">Ouvrir les réglages de notification</string>
     <string name="update_no_release">Aucune version n\'a encore été publiée.</string>
+    <string name="channel_music">Musique</string>
+    <string name="music_manual_title">Les enceintes sont prêtes</string>
+    <string name="music_manual_text">Touchez pour lancer votre playlist.</string>
+    <string name="section_accent">Couleur d\'accent</string>
+    <string name="accent_hint">La première pastille suit votre fond d\'écran, quand le système le permet.</string>
 </resources>

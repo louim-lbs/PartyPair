@@ -34,7 +34,7 @@ fun SleepDialog(
             Text(
                 stringResource(R.string.section_sleep).uppercase(),
                 style = Silkscreen.copy(fontSize = 13.sp),
-                color = Party.Orange
+                color = LocalAccent.current
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -61,7 +61,7 @@ fun SleepDialog(
                 Text(
                     stringResource(R.string.sleep_cancel),
                     style = Body.copy(fontSize = 16.sp),
-                    color = Party.Orange,
+                    color = LocalAccent.current,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onPick(null) }

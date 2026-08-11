@@ -1,65 +1,67 @@
 # Party Pair
 
-Réveille deux enceintes JBL PartyBox et les met en paire stéréo, d'un seul appui.
+Wakes two JBL PartyBox speakers and links them in wireless stereo, with one tap.
 
 ![Party Pair](docs/screenshot.png)
 
-L'application officielle demande une dizaine de manipulations pour rétablir la liaison stéréo, qui ne survit pas à l'extinction des enceintes. Celle-ci le fait en un geste, et sait aussi se déclencher toute seule.
+The official app takes a dozen steps to rebuild the stereo link, which does not survive switching the speakers off. This one does it in a single gesture — and can do it on its own.
 
-L'interface suit la langue du téléphone : **Boîte de Fête** en français, **Party Pair** ailleurs.
+The interface follows your phone's language: **Party Pair** in English, **Boîte de Fête** in French.
 
-## Ce qu'elle sait faire
+*[Version française du README](README.fr.md)*
 
-- **Un bouton** : réveille les deux enceintes, rétablit la paire stéréo, connecte l'audio. Un second appui les rendort, avec un fondu sonore.
-- **Réveil** : les enceintes s'allument avant votre alarme et lancent votre playlist.
-- **Minuterie** : extinction différée, avec décompte dans les notifications.
-- **Graves, volume, équilibre** entre les deux enceintes, canaux gauche et droite.
-- **Widget, tuile de réglages rapides, raccourcis** pour les routines Samsung et Home Assistant.
+## What it does
 
-## Installation
+- **One button**: wakes both speakers, rebuilds the stereo link, connects the audio. A second tap puts them back to sleep, fading the sound out first.
+- **Wake-up**: the speakers switch on ahead of your alarm and start your playlist.
+- **Sleep timer**: delayed shutdown, with a countdown in your notifications.
+- **Bass, volume, balance** between the two speakers, left and right channels.
+- **Widget, quick-settings tile and shortcuts** for Samsung routines and Home Assistant.
 
-Aucune installation depuis un magasin d'applications : téléchargez l'APK depuis la [page des versions](https://github.com/louim-lbs/PartyPair/releases/latest), ouvrez-le sur le téléphone, et autorisez l'installation depuis cette source.
+## Install
 
-Vous préférez compiler vous-même ? Voir [docs/COMPILER.md](docs/COMPILER.md).
+Not on any app store: download the APK from the [releases page](https://github.com/louim-lbs/PartyPair/releases/latest), open it on your phone, and allow installation from that source.
 
-## Premier lancement
+Prefer to build it yourself? See [docs/BUILDING.md](docs/BUILDING.md).
 
-1. **Appairez vos enceintes en stéréo une fois avec l'application JBL officielle.** C'est la seule étape que Party Pair ne peut pas faire à votre place ; ensuite elle rétablit la liaison toute seule.
-2. Ouvrez Party Pair et accordez l'accès Bluetooth.
-3. Choisissez l'enceinte qui reçoit le son, puis celle qui la rejoint. La seconde n'a pas besoin d'être appairée au téléphone — mieux vaut qu'elle ne le soit pas.
-4. Confirmez l'adresse Bluetooth du téléphone, détectée automatiquement si possible.
+## First run
 
-C'est tout. Les fois suivantes, un appui suffit.
+1. **Pair your speakers in stereo once, using the official JBL app.** This is the only step Party Pair cannot do for you; from then on it rebuilds the link by itself.
+2. Open Party Pair and grant Bluetooth access.
+3. Pick the speaker that plays the sound, then the one that joins it. The second one does not need to be paired with your phone — better if it isn't.
+4. Confirm your phone's Bluetooth address, detected automatically where possible.
 
-## Matériel
+That's it. From then on, one tap.
 
-Vérifié sur deux **JBL PartyBox 710**, avec un Samsung Galaxy S20 FE sous Android 13.
+## Hardware
 
-Le protocole devrait valoir pour toute la gamme PartyBox, mais rien d'autre n'a été testé. Si vous l'essayez sur un autre modèle, [dites-nous ce que ça donne](https://github.com/louim-lbs/PartyPair/issues) — c'est ce qui fera avancer le sujet.
+Verified on two **JBL PartyBox 710**, running Android 13.
 
-Android 8 minimum. Le réglage de langue et le choix par application demandent Android 13.
+The protocol should hold across the PartyBox range, but nothing else has been tested. If you try it on another model, [tell us how it went](https://github.com/louim-lbs/PartyPair/issues) — that is what will move this forward.
 
-## Pour aller plus loin
+Android 8 or later. Language selection and per-app language need Android 13.
+
+## Further reading
 
 | | |
 |---|---|
-| [Automatisation](docs/AUTOMATISATION.md) | Routines Samsung, Home Assistant, Tasker, réveil, pilotage depuis un Raspberry Pi |
-| [Compiler l'application](docs/COMPILER.md) | Depuis Windows avec VS Code, ou en local |
-| [Le protocole](docs/PROTOCOL.md) | La rétro-ingénierie complète du protocole BLE des PartyBox |
-| [Publier sur F-Droid](docs/FDROID.md) | Ce qu'il resterait à faire |
+| [Automation](docs/AUTOMATION.md) | Samsung routines, Home Assistant, Tasker, wake-up, driving the speakers from a Raspberry Pi |
+| [Building](docs/BUILDING.md) | From Windows with VS Code, or locally |
+| [The protocol](docs/PROTOCOL.md) | The full reverse engineering of the PartyBox BLE protocol |
+| [Security](docs/SECURITY.md) | What the app exposes, asks for, and stores |
 
-## Comment ça marche
+## How it works
 
-Les PartyBox exposent un service BLE propriétaire — des trames `AA <commande> <longueur> <données>` — qui n'était documenté nulle part. Il a été reconstitué en croisant des captures Bluetooth HCI et la décompilation de l'application officielle. La commande d'appairage stéréo tient en sept octets :
+PartyBox speakers expose a proprietary BLE service — frames of the form `AA <command> <length> <payload>` — documented nowhere. It was reconstructed by cross-referencing Bluetooth HCI captures with a decompilation of the official app. The stereo pairing command is seven bytes:
 
 ```
 AA 13 04 00 39 01 01
 ```
 
-Tout est écrit dans [docs/PROTOCOL.md](docs/PROTOCOL.md) : table des opcodes, champs, séquences vérifiées. C'est réutilisable par n'importe quel client, Android ou non.
+Everything is written down in [docs/PROTOCOL.md](docs/PROTOCOL.md): opcode table, fields, verified sequences. It is reusable from any client, Android or otherwise.
 
-## Licence et marques
+## Licence and trademarks
 
-MIT — voir [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
-Projet indépendant, sans lien avec Harman ou JBL. « JBL » et « PartyBox » sont des marques de Harman International Industries ; aucun élément graphique de la marque n'est repris ici. Le protocole a été reconstitué à des fins d'interopérabilité, sur du matériel dont l'auteur est propriétaire.
+An independent project, unaffiliated with Harman or JBL. "JBL" and "PartyBox" are trademarks of Harman International Industries; no brand artwork is used here. The protocol was reconstructed for interoperability, on hardware the author owns.

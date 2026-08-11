@@ -48,7 +48,7 @@ fun ConfirmDialog(
                 .background(Party.Grille, RoundedCornerShape(18.dp))
                 .padding(horizontal = 24.dp, vertical = 24.dp)
         ) {
-            Text(title, style = Silkscreen.copy(fontSize = 14.sp), color = Party.Orange)
+            Text(title, style = Silkscreen.copy(fontSize = 14.sp), color = LocalAccent.current)
             Spacer(Modifier.height(10.dp))
             Text(body, style = Body, color = Party.Silkscreen)
 
@@ -85,7 +85,7 @@ fun ConfirmDialog(
                     Text(
                         confirmLabel.uppercase(),
                         style = Silkscreen.copy(fontSize = 13.sp),
-                        color = Party.Orange
+                        color = LocalAccent.current
                     )
                 }
             }

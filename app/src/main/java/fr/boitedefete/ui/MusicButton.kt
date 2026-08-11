@@ -42,7 +42,7 @@ fun MusicButton(packageName: String?, label: String, onClick: () -> Unit) {
             Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(30.dp))
             Spacer(Modifier.width(12.dp))
         }
-        Text(label.uppercase(), style = Silkscreen.copy(fontSize = 14.sp), color = Party.Orange)
+        Text(label.uppercase(), style = Silkscreen.copy(fontSize = 14.sp), color = LocalAccent.current)
     }
 }
 

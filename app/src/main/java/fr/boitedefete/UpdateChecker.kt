@@ -89,6 +89,30 @@ object UpdateChecker {
         }
     }
 
+    /**
+     * Redirections suivies a la main plutot qu'automatiquement, pour verifier
+     * chaque etape : un saut vers du HTTP ou vers un autre hote serait accepte
+     * en silence sinon.
+     */
+    private fun open(url: URL): HttpURLConnection =
+        (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = 15_000
+            readTimeout = 60_000
+            instanceFollowRedirects = false
+        }
+
+    /** Adresses acceptees pour un fichier destine a etre installe. */
+    private fun isTrusted(url: String): Boolean = runCatching {
+        val parsed = URL(url)
+        parsed.protocol == "https" && parsed.host in TRUSTED_HOSTS
+    }.getOrDefault(false)
+
+    private val TRUSTED_HOSTS = setOf(
+        "github.com",
+        "objects.githubusercontent.com",
+        "release-assets.githubusercontent.com"
+    )
+
     /** Le depot ne publie encore aucune version. */
     private class NoReleaseException : Exception()
 
@@ -125,14 +149,29 @@ object UpdateChecker {
     suspend fun downloadAndInstall(context: Context, apkUrl: String): Boolean =
         withContext(Dispatchers.IO) {
             runCatching {
+                // Le fichier finira par etre installe : refuser tout ce qui n'est
+                // pas servi par le depot officiel, en HTTPS de bout en bout.
+                require(isTrusted(apkUrl)) { "adresse de telechargement inattendue" }
+
                 val target = java.io.File(context.getExternalFilesDir(null), "party-pair.apk")
-                (URL(apkUrl).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 15_000
-                    readTimeout = 60_000
-                    instanceFollowRedirects = true
-                }.inputStream.use { input ->
+                var url = URL(apkUrl)
+                var redirects = 0
+                var connection = open(url)
+                while (connection.responseCode in 300..399 && redirects < 5) {
+                    val next = connection.getHeaderField("Location") ?: break
+                    connection.disconnect()
+                    require(isTrusted(next)) { "redirection vers une adresse inattendue" }
+                    url = URL(next)
+                    connection = open(url)
+                    redirects++
+                }
+                require(connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    "reponse inattendue : ${connection.responseCode}"
+                }
+                connection.inputStream.use { input ->
                     target.outputStream().use { output -> input.copyTo(output) }
                 }
+                connection.disconnect()
 
                 val uri = androidx.core.content.FileProvider.getUriForFile(
                     context, "${context.packageName}.updates", target

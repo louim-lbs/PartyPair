@@ -142,4 +142,9 @@
     <string name="notifications_blocked">Notifications are turned off, so the sleep timer countdown and failure alerts cannot appear.</string>
     <string name="notifications_open">Open notification settings</string>
     <string name="update_no_release">No version has been published yet.</string>
+    <string name="channel_music">Music</string>
+    <string name="music_manual_title">Speakers are ready</string>
+    <string name="music_manual_text">Tap to start your playlist.</string>
+    <string name="section_accent">Accent colour</string>
+    <string name="accent_hint">The first swatch follows your wallpaper, when the system offers it.</string>
 </resources>

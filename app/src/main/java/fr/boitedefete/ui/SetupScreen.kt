@@ -148,7 +148,7 @@ private fun SpeakerStep(
         )
     }
 
-    Text(question, style = Silkscreen.copy(letterSpacing = 1.sp), color = Party.Orange)
+    Text(question, style = Silkscreen.copy(letterSpacing = 1.sp), color = LocalAccent.current)
     Spacer(Modifier.height(6.dp))
     Text(hint, style = Silkscreen.copy(letterSpacing = 0.sp), color = Party.Muted)
     Spacer(Modifier.height(18.dp))
@@ -160,7 +160,7 @@ private fun SpeakerStep(
         Text(
             stringResource(if (scanning) R.string.scan_stop else R.string.scan_start).uppercase(),
             style = Silkscreen,
-            color = Party.Orange
+            color = LocalAccent.current
         )
     }
 
@@ -253,7 +253,7 @@ private fun DeviceRow(
         Text(
             name,
             style = Silkscreen.copy(letterSpacing = 1.sp),
-            color = if (highlighted) Party.Orange else Party.Silkscreen
+            color = if (highlighted) LocalAccent.current else Party.Silkscreen
         )
         Text(
             detail,
@@ -273,7 +273,7 @@ private fun PhoneMacStep(
     Text(
         stringResource(R.string.setup_phone_mac),
         style = Silkscreen.copy(letterSpacing = 1.sp),
-        color = Party.Orange
+        color = LocalAccent.current
     )
     Spacer(Modifier.height(6.dp))
     Text(
@@ -303,7 +303,7 @@ private fun PhoneMacStep(
         Text(
             stringResource(R.string.mac_incomplete),
             style = Body.copy(fontSize = 13.sp),
-            color = Party.Orange
+            color = LocalAccent.current
         )
     }
 
@@ -316,7 +316,7 @@ private fun PhoneMacStep(
         Text(
             stringResource(R.string.setup_finish).uppercase(),
             style = Silkscreen,
-            color = Party.Orange,
+            color = LocalAccent.current,
             textAlign = TextAlign.Center
         )
     }

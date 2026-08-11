@@ -103,6 +103,14 @@ class Settings(context: Context) {
         get() = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, value).apply()
 
+    /**
+     * Couleur d'accent : « auto » pour la teinte du fond d'ecran, sinon le nom
+     * d'une teinte fixe. Voir ACCENTS dans le theme.
+     */
+    var accent: String
+        get() = prefs.getString(KEY_ACCENT, DEFAULT_ACCENT).orEmpty()
+        set(value) = prefs.edit().putString(KEY_ACCENT, value).apply()
+
     /** Confirmation avant la mise en veille, pour parer un appui accidentel. */
     var confirmStandby: Boolean
         get() = prefs.getBoolean(KEY_CONFIRM_STANDBY, true)
@@ -156,6 +164,7 @@ class Settings(context: Context) {
         add("volume=$wakeVolume")
         add("equilibre=$balance")
         add("graves=$bassBoost")
+        add("accent=$accent")
     }.joinToString("\n")
 
     /**
@@ -178,6 +187,7 @@ class Settings(context: Context) {
                 "volume" -> value.trim().toIntOrNull()?.let { wakeVolume = it }
                 "equilibre" -> value.trim().toIntOrNull()?.let { balance = it }
                 "graves" -> value.trim().toIntOrNull()?.let { bassBoost = it }
+                "accent" -> accent = value.trim()
             }
         }
         return recognized
@@ -235,6 +245,13 @@ class Settings(context: Context) {
         private const val KEY_SLEEP_AT = "sleep_at"
         private const val KEY_CONFIRM_STANDBY = "confirm_standby"
         private const val KEY_LAST_UPDATE_CHECK = "last_update_check"
+        private const val KEY_ACCENT = "accent"
+
+        /** L'orange du badge JBL, l'identite d'origine de l'application. */
+        const val DEFAULT_ACCENT = "orange"
+
+        /** Teinte tiree du fond d'ecran, a la maniere de Material You. */
+        const val ACCENT_DYNAMIC = "auto"
         private const val KEY_PRIMARY_CHANNEL = "primary_channel"
         private const val KEY_SECONDARY_CHANNEL = "secondary_channel"
 

@@ -58,7 +58,7 @@ fun CountdownDialog(
             Text(
                 stringResource(R.string.countdown_title),
                 style = Silkscreen.copy(fontSize = 14.sp),
-                color = Party.Orange
+                color = LocalAccent.current
             )
             Spacer(Modifier.height(10.dp))
             Text(
@@ -86,7 +86,7 @@ fun CountdownDialog(
                     Text(
                         stringResource(R.string.countdown_now).uppercase(),
                         style = Silkscreen.copy(fontSize = 13.sp),
-                        color = Party.Orange
+                        color = LocalAccent.current
                     )
                 }
             }

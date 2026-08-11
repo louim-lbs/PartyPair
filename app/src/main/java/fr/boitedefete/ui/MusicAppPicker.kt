@@ -90,7 +90,7 @@ fun MusicAppPicker(
             Text(
                 stringResource(R.string.info_back).uppercase(),
                 style = Silkscreen,
-                color = Party.Orange
+                color = LocalAccent.current
             )
         }
     }

@@ -1,6 +1,11 @@
 package fr.boitedefete.ui
 
+import android.os.Build
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -47,11 +52,41 @@ val Display = TextStyle(
     letterSpacing = 5.sp
 )
 
+/**
+ * Couleur d'accent en vigueur.
+ *
+ * Passe par le fil de composition plutot que par une constante, pour que le
+ * choix de l'utilisateur se propage a tout l'ecran sans le reconstruire.
+ */
+val LocalAccent = staticCompositionLocalOf { Party.Orange }
+
+/** Teintes proposees, en plus de celle tiree du fond d'ecran. */
+val ACCENTS = mapOf(
+    "orange" to Party.Orange,
+    "cyan" to Color(0xFF00B8D4),
+    "magenta" to Color(0xFFE91E63),
+    "vert" to Color(0xFF43A047),
+    "or" to Color(0xFFFFC107)
+)
+
+/**
+ * Accent tire du fond d'ecran, quand le systeme sait le fournir.
+ * Material You n'existe qu'a partir d'Android 12.
+ */
 @Composable
-fun BoiteDeFeteTheme(content: @Composable () -> Unit) {
+fun dynamicAccent(): Color? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        dynamicDarkColorScheme(LocalContext.current).primary
+    } else {
+        null
+    }
+
+@Composable
+fun BoiteDeFeteTheme(accent: Color = Party.Orange, content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalAccent provides accent) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = Party.Orange,
+            primary = accent,
             background = Party.Cabinet,
             surface = Party.Grille,
             onBackground = Party.Silkscreen,
@@ -60,4 +95,5 @@ fun BoiteDeFeteTheme(content: @Composable () -> Unit) {
         typography = Typography(),
         content = content
     )
+    }
 }

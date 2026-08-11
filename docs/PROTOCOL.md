@@ -1,222 +1,169 @@
-# Protocole BLE JBL PartyBox
+# JBL PartyBox BLE protocol
 
-Source : décompilation de `base.apk` (JBL PartyBox **3.14.1**, build 2026-05-11), non obfusquée.
-Classes clés : `com.harman.sdk.utils.PacketFormat`, `com.harman.sdk.command.BaseCommand`, `com.harman.sdk.command.StereoFlowCommand`, `com.harman.sdk.impl.DeviceStatusControlImpl`.
+Reconstructed by cross-referencing Bluetooth HCI captures from an Android phone with a decompilation of the official JBL PartyBox app (3.14.1). Verified against two PartyBox 710.
+
+To the best of our knowledge this was not documented publicly anywhere. It is reusable from any BLE client.
+
+*[Version française](fr/PROTOCOLE.md)*
 
 ---
 
-## 1. Transport GATT
+## 1. GATT transport
 
-| Élément | Valeur |
+| | |
 |---|---|
 | Service | `65786365-6C70-6F69-6E74-2E636F6D0000` |
-| TX (écriture, app → enceinte) | `65786365-6C70-6F69-6E74-2E636F6D0002` |
-| RX (notifications, enceinte → app) | `65786365-6C70-6F69-6E74-2E636F6D0001` |
-| MTU demandé | 512 |
-| Mode d'écriture | Write Without Response |
+| TX, write | `65786365-6C70-6F69-6E74-2E636F6D0002` |
+| RX, notifications | `65786365-6C70-6F69-6E74-2E636F6D0001` |
+| Requested MTU | 512 |
+| Write mode | Write Without Response |
 
-Source : `AppConfig.rxUUID` / `txUUID` / `bleRxTxUUID`.
+The service UUID reads as `excelpoint.com` in ASCII — the supplier of the Bluetooth audio module, whose reference firmware leaked its own identifier into the product.
 
-## 2. Format de trame
+**The notify characteristic has no CCCD descriptor.** The speaker pushes notifications unprompted; there is nothing to subscribe to. On Android, calling `setCharacteristicNotification()` is enough. Tools that insist on writing a descriptor — nRF Connect among them — will never show you these notifications.
+
+## 2. Frame format
 
 ```
-AA <commande> <longueur_payload> <payload...>
-│
-└─ identifier, fixé à (byte) -86 = 0xAA dans BaseCommand
+AA <command> <payload length> <payload...>
 ```
 
-Longueur sur **1 octet**. Pas de checksum au niveau trame (un tag CRC16 `0x44` existe au niveau TLV).
+One identifier byte, fixed at `0xAA`. One length byte. No frame-level checksum, though a CRC16 field exists at the TLV level.
 
-**Convention des opcodes** — quartet bas :
-`1` = requête · `2` = réponse · `3` = set · `4` = notification/push
+**Opcode convention** — the low nibble carries the operation:
 
-## 3. Table des opcodes (extraite de PacketFormat)
-
-| Hex | Constante |
+| Low nibble | Meaning |
 |---|---|
-| `03` | REQ_DISCONNECT_DEVICE (avec payload `05` = **power on**) |
-| `11` / `12` / `13` | REQ / RESP / SET_DEV_INFO |
-| `16` | ROLE_INFO |
-| `31` / `32` / `33` | REQ / RESP / SET_LIGHT_INFO |
-| `34` / `35` | RESP_ACTIVE_LIGHT_PATTERN / SET_CUSTOM_LIGHT_PATTERN |
-| `41` / `42` / `43` | REQ / RESP / SET_PLAYER_INFO |
-| `51` / `52` / `53` / `54` | REQ / RET / SET / NOTIFY_DJEFFECT_STATUS |
-| `61` / `62` / `63` | REQ / RET / SET_BASS_BOOST |
-| `6A` / `6B` | SET / RET_LINK_MODE |
-| `71` / `72` / `73` / `74` | REQ / RET / SET / NOTIFY_KARAOKE_STATUS |
-| `81` / `82` | REQ / RET_PHONE_MAC_ADDRESS |
-| `83` / `84` | REQ_PHONE_MAC_ADDRESS_FROM_DEVICE / RET_PHONE_MAC_ADDRESS_TO_DEVICE |
-| **`85`** | **SET_SECONDARY_SPEAKER_ADDRESS** (reçu uniquement — l'app ne l'envoie jamais) |
-| `91` / `92` / `93` | REQ / RET / SET_SIMPLE_EQ |
-| `9D` / `9E` | REQ / RET_BATTERY_STATUS |
-| `A1` / `A2` | REQ_DEV_FEATURE_INFO / RES_DEVICE_FEATURE_INFO |
-| `F4` | IDENTIFY_DEVICE |
+| `1` | request |
+| `2` | response |
+| `3` | set |
+| `4` | notification |
 
-## 4. Tags TLV (dans les payloads)
+Responses are a status byte followed by tag/length/value triplets.
 
-| Tag | Constante |
+## 3. Opcodes
+
+| Hex | Name |
 |---|---|
-| `35` | ACTIVE_CHANNEL_TOKEN_ID |
-| `36` | AUDIO_SOURCE_TOKEN_ID |
-| `38` | ROLE_TOKEN_ID |
-| `39` | PARTY_CONNECT_MODE_TOKEN_ID |
-| `3A` | TWS_STEREO_GROUP_NAME (16 octets max, UTF-8) |
-| `3B` | TWS_STEREO_GROUP_ID (8 octets max) |
-| `41` / `42` / `43` | PLAYER_PLAY / VOL / MUTE |
-| `44` | CRC16_TOKEN_ID |
+| `03` | device action — payload `05` powers on, `04` powers off |
+| `11` / `12` / `13` | request / response / set device info |
+| `16` | role info |
+| `31` / `32` / `33` | request / response / set light info |
+| `34` / `35` | active light pattern / set custom pattern |
+| `41` / `42` / `43` | request / response / set player info |
+| `51` / `52` / `53` / `54` | DJ effect status |
+| `61` / `62` / `63` | bass boost |
+| `6A` / `6B` | set / return link mode |
+| `71` / `72` / `73` / `74` | karaoke status |
+| `81` / `82` | request / return phone MAC |
+| `83` / `84` | request from device / send to device |
+| `85` | **secondary speaker address** — received only, never sent by the app |
+| `91` / `92` / `93` | simple EQ |
+| `9D` / `9E` | battery status |
+| `A1` / `A2` | device feature info |
+| `B1` | analytics request |
+| `EA` | keepalive, sent every 5 s by the official app |
+| `F4` | identify device |
 
-**AudioChannel** : `00` = aucun · `01` = GAUCHE · `02` = DROITE
-**PartyConnectStatus** : `00` = OFF · `01` = WIRELESS_CONNECTING · `02` = WIRELESS_CONNECTED · `03` = WIRED
+## 4. TLV tags
 
----
+| Tag | Meaning |
+|---|---|
+| `35` | active channel |
+| `36` | audio source |
+| `37` | own MAC address |
+| `38` | role |
+| `39` | party connect mode |
+| `3A` | stereo group name, up to 16 bytes UTF-8 |
+| `3B` | stereo group ID, up to 8 bytes |
+| `40` | model identifier |
+| `41` / `42` / `43` | player play / volume / mute |
+| `44` | CRC16 |
+| `46` / `47` | primary / secondary speaker volume |
 
-## 5. Réveil (version propre)
+**Audio channel**: `00` none, `01` left, `02` right.
+**Party connect**: `00` off, `01` connecting, `02` connected.
+**Volume**: 0 to 32. The official app caps its slider there.
+
+## 5. Waking a speaker
 
 ```
 AA 03 01 05
 ```
 
-C'est `ReqPowerOnCommand` : `setCommand((byte) 3)`, `setPayload({5})`. Remplace avantageusement la séquence empirique `AA-11-00` / `AA-61-00` / `AA-84-06-<MAC>`.
+In practice **opening a BLE connection is enough** to bring a speaker out of standby — the controller stays powered and starts the amplifier on the first link. The ten commands the official app fires on connection are state synchronisation, not a wake-up call.
 
-Réponse attendue : commande `00` (DEV_ACK) avec payload `03 00` (`00` = succès).
+Expect a `AA 00` acknowledgement carrying the command and a status byte.
 
----
-
-## 6. Appairage stéréo TWS — la commande recherchée
-
-Construite par `StereoFlowCommand.init()`, envoyée via `setStereoFlow()` :
+## 6. Stereo pairing
 
 ```
-commande = 0x13 (SET_DEV_INFO)
-payload  = 00
-         + 3B <len> <groupID>          ← identique sur les deux enceintes
-         + 39 01 <PartyConnectStatus>
-         + 35 01 <AudioChannel>
-         + 3A <len> <nom du groupe>    ← optionnel
+AA 13 04 00 39 01 01
 ```
 
-**Le groupID** est généré par `geneGroupID()` : MD5 de `(millis + aléa)`, tronqué à 8 caractères hex (= 4 octets), avec la règle que les 2 premiers caractères ne doivent pas être `00`. Autrement dit : **n'importe quelle valeur convient**, du moment qu'elle est identique sur les deux enceintes et ne commence pas par `00`.
+Byte by byte: identifier, `13` set device info, payload length 4, device index `00`, then the TLV `39 01 01` — party connect mode set to *connecting*.
 
-### Commandes à envoyer
+**No group ID, no channel.** The command builder in the app can send those fields, but only does so during initial pairing. To *re-establish* a link between speakers already paired, the connect-mode tag alone is enough: channel and group are held in the speakers' own flash.
 
-Avec le groupe `A1B2C3D4` :
+### Observed order
 
-**enceinte principale → canal GAUCHE**
-```
-AA-13-0D-00-3B-04-A1-B2-C3-D4-39-01-01-35-01-01
-```
-
-**enceinte secondaire → canal DROITE**
-```
-AA-13-0D-00-3B-04-A1-B2-C3-D4-39-01-01-35-01-02
-```
-
-Décomposition : `00` · `3B 04 A1B2C3D4` (groupe) · `39 01 01` (WIRELESS_CONNECTING) · `35 01 01|02` (canal). Payload = 13 octets = `0x0D`.
-
-Variante avec nom de groupe « Stereo » (canal gauche) :
-```
-AA-13-15-00-3B-04-A1-B2-C3-D4-39-01-01-35-01-01-3A-06-53-74-65-72-65-6F
-```
-
-**Point crucial** : `StereoGroupingState.startGrouping(mainDevice, mainChannel, coDevice, coChannel, groupID, groupName)` envoie la commande **aux deux enceintes**. Il faut donc se connecter successivement à chacune — ce qui confirme la connexion BLE vers enceinte secondaire qu'on voyait dans le journal HCI.
-
-Réponse attendue : `getResponseCommands().add((byte) 0)` → notification commençant par `AA 00`.
-
----
-
-## 7. Procédure de test
-
-1. Réveiller les deux enceintes (`AA-03-01-05`, ou connexion simple pour enceinte secondaire).
-2. Connecter nRF Connect à **enceinte principale** → écrire la trame canal gauche sur `...0002`.
-3. Se déconnecter, connecter à **enceinte secondaire** → écrire la trame canal droite.
-4. Vérifier : reconnecter à enceinte principale, envoyer `AA-11-00` et lire les TLV du dump `AA 12` — le tag `39` doit être passé de `00` à `02` (WIRELESS_CONNECTED), et les tags `3A`/`3B` doivent apparaître.
-
-Pour **dégrouper** : renvoyer la même trame avec `39 01 00` (PARTY_CONNECT_OFF).
-
----
-
-## 8. Vérifications croisées avec les captures
-
-Le décodage colle avec la toute première capture HCI :
-
-| Observé | Interprétation confirmée |
-|---|---|
-| `AA 11 00` | REQ_DEV_INFO |
-| `AA 12 3C 00 …` | RESP_DEV_INFO + TLV |
-| `AA 84 06 <MAC tel>` | RET_PHONE_MAC_ADDRESS_TO_DEVICE |
-| `AA 85 06 <MAC enceinte secondaire>` | SET_SECONDARY_SPEAKER_ADDRESS |
-| `AA 82 06 FF×6` | RET_PHONE_MAC_ADDRESS, emplacement vide |
-| TLV `39 01 00` | PARTY_CONNECT_OFF — cohérent avec un TWS inactif |
-| TLV `35 01 01` | enceinte principale déjà configurée en canal GAUCHE |
-| TLV `37 06 <MAC>` | adresse propre de l'enceinte |
-# TWS JBL PartyBox — séquence confirmée
-
-Capture `btsnoop_hci.log` du 2026-08-06 09:45, 6882 paquets, 170 trames ATT.
-Appairage TWS réalisé par l'app JBL PartyBox et observé de bout en bout.
-
----
-
-## La commande
-
-```
-AA-13-04-00-39-01-01
-```
-
-Décomposition :
-| Octet | Rôle |
-|---|---|
-| `AA` | identifier |
-| `13` | SET_DEV_INFO |
-| `04` | longueur du payload |
-| `00` | device index |
-| `39 01 01` | TLV : PARTY_CONNECT_MODE = `01` (WIRELESS_CONNECTING) |
-
-**Ni group ID, ni canal.** Ma reconstruction précédente (`AA-13-0D-00-3B-04-…-35-01-01`) était trop complète : `StereoFlowCommand` *sait* envoyer ces champs, mais l'app ne les utilise que lors de l'appairage initial. Pour **relier** deux enceintes déjà appairées, seul le tag `39` est envoyé — canal et groupe sont déjà en flash.
-
-## L'ordre exact observé
-
-| t (s) | Cible | Trame |
+| t (s) | Target | Frame |
 |---|---|---|
-| 63.935 | — | l'app ouvre une connexion BLE vers enceinte secondaire (handle `0x000b`) |
-| 67.335 | **enceinte secondaire** | `AA-13-04-00-39-01-01` |
-| 67.503 | enceinte secondaire | ack `AA 00 02 13 00` |
-| 67.593 | **enceinte principale** | `AA-13-04-00-39-01-01` |
-| 67.756 | enceinte principale | ack `AA 00 02 13 00` |
-| 71.643 | enceinte principale | `AA 12 04 00 39 01 02` → **CONNECTED** |
+| 63.9 | — | the app opens a BLE connection to the secondary speaker |
+| 67.3 | secondary | `AA 13 04 00 39 01 01` |
+| 67.5 | secondary | ack `AA 00 02 13 00` |
+| 67.6 | main | `AA 13 04 00 39 01 01` |
+| 67.8 | main | ack `AA 00 02 13 00` |
+| 71.6 | main | `AA 12 04 00 39 01 02` → **connected** |
 
-**enceinte secondaire (secondaire) reçoit la commande en premier**, 258 ms avant enceinte principale. Liaison établie ~4 s après.
+The secondary speaker receives the command 258 ms before the main one. The link settles about four seconds later.
 
-## États lus dans les notifications
+To unlink, send the same frame with `39 01 00`.
 
-| Notification | Lecture |
+## 7. Other useful commands
+
+| Purpose | Frame |
 |---|---|
-| `AA 00 02 13 00` | accusé de réception, statut `00` = succès |
-| `AA 12 04 00 39 01 01` | party connect = WIRELESS_CONNECTING |
-| `AA 12 04 00 39 01 02` | party connect = **WIRELESS_CONNECTED** |
-| `AA 12 04 00 35 01 01` | enceinte principale = canal GAUCHE (déjà en flash) |
-| `… 35 01 02 … 37 06 BBBBBBBBBBBB … 40 10 TL1250-XXXXXXXXXX` | enceinte secondaire = canal DROITE, sa MAC, son modèle |
-| `AA 85 06 AA AA AA AA AA AA` | enceinte secondaire déclare enceinte principale comme enceinte secondaire |
-| `AA 12 07 00 36 01 00 38 01 02` | tag `38` (ROLE) passe de `00` à `02` |
+| Connect to a classic Bluetooth address | `AA 84 06 <6 bytes>` |
+| Set volume, 0–32 | `AA 43 04 00 42 01 <level>` |
+| Volume of the main speaker | `AA 43 04 00 46 01 <level>` |
+| Volume of the secondary speaker | `AA 43 04 00 47 01 <level>` |
+| Bass boost, 0 off / 1 / 2 | `AA 63 01 <level>` |
+| Assign a channel, 1 left / 2 right | `AA 13 04 00 35 01 <channel>` |
+| Request device info | `AA 11 00` |
+| Request player info | `AA 41 00` |
 
-## Opcodes complémentaires observés
+`AA 84 06` takes the address of **whoever is asking**. From a phone it holds the phone's own classic Bluetooth address; from a Raspberry Pi, the dongle's. This is what makes the speaker come to you for audio, and it is what allows the protocol to be driven from anything.
 
-| Opcode | Rôle |
-|---|---|
-| `EA` | keepalive — l'app l'envoie toutes les 5 s sur la connexion active |
-| `B1` | SEND_DEVICE_ANALYTICS_REQUEST |
-| `6A` / `6B` | SET / RET_LINK_MODE (non utilisés dans ce flux) |
+## 8. Reading the state
 
-## Procédure à reproduire
+Sending `AA 11 00` yields several `AA 12` frames: one long full state dump, then short partial updates. **Reading only the first is a coin toss** — walk the responses until one actually carries the tag you asked for.
 
-1. Réveiller les deux enceintes — la simple connexion BLE suffit.
-2. Se connecter à **enceinte secondaire**, écrire `AA-13-04-00-39-01-01` sur `65786365-6C70-6F69-6E74-2E636F6D0002` (Write Without Response).
-3. ~250 ms plus tard, se connecter à **enceinte principale** et écrire la même trame.
-4. Attendre ~4 s. La liaison s'établit.
+Useful readings:
 
-Pour **dégrouper** : même trame avec `39 01 00` (PARTY_CONNECT_OFF).
+- tag `39` = `02` — the stereo pair is up
+- tag `35` — which channel this speaker holds
+- tag `37` — its own address
+- tag `40` — its model identifier
 
-Vérification sans notifications : le son doit sortir des deux enceintes.
+The speaker also announces `AA 85 06 <address>` unprompted on connection: the partner it remembers. `FF:FF:FF:FF:FF:FF` means no pair has ever been formed — the initial pairing has to go through the official app.
 
-## Note pour le portage sur NAS
+## 9. Practical notes
 
-L'app maintient un keepalive `AA-EA-00` toutes les 5 s sur la connexion BLE. À vérifier lors du portage : si la liaison BLE tombe faute de keepalive, l'enceinte pourrait interrompre la liaison TWS. À tester avant de conclure.
+**No pairing is needed.** No security exchange appears anywhere in the captures: the BLE control channel works without bonding. A speaker that only ever receives commands need not be paired with the phone at all — better if it isn't, since it then stops occupying a Bluetooth connection.
+
+**Discovery**: PartyBox speakers advertise service data under the 16-bit UUID `0xFDDF`. Across a capture holding 64 advertising devices, only the two speakers carried it. It makes a clean filter.
+
+**No keepalive is required.** The official app sends `AA EA 00` every five seconds, but the stereo link holds without it — and survives the BLE connection closing entirely. A few seconds of contact is enough to set everything up.
+
+**Absolute volume**: once A2DP is connected, Android mirrors its own media volume onto the speaker, overwriting anything set earlier over BLE. Apply volume *after* the audio link, not before.
+
+## 10. Method
+
+Three sources, cross-checked:
+
+1. **Bluetooth HCI captures** from Android developer options. Note that the always-on in-memory log only records events, never payloads: the full log has to be enabled explicitly, and the Bluetooth adapter restarted for it to take effect.
+2. **Decompiling the official app** with jadx. It is not obfuscated, and the SDK carries readable names: `PacketFormat`, `StereoFlowCommand`, `TWSControlImpl`.
+3. **Verification on real hardware**, replaying each command and observing the result.
+
+Where the two sources disagreed, the capture won.
