@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import android.media.AudioManager
 import androidx.annotation.StringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -17,7 +18,6 @@ import kotlin.math.max
 /** Etapes de la sequence. Le libelle suit la langue du telephone. */
 enum class Step(@StringRes val label: Int) {
     IDLE(R.string.step_idle),
-    CHECKING(R.string.step_checking),
     WAKING_SECONDARY(R.string.step_waking_named),
     WAKING_PRIMARY(R.string.step_waking_named),
     LINKING(R.string.step_linking),
@@ -40,7 +40,7 @@ class PartyController(private val context: Context) {
 
     private val settings = Settings(context)
 
-    suspend fun run(onStep: (Step) -> Unit) {
+    suspend fun run(onStep: (Step) -> Unit, opened: SpeakerLink? = null) {
         warning = null
         subject = null
 
@@ -52,13 +52,15 @@ class PartyController(private val context: Context) {
 
         // L'enceinte principale d'abord : c'est elle qu'on interroge pour
         // connaitre l'etat de la paire, elle est donc reveillee la premiere.
-        // L'ordre des messages doit refleter ce qui se passe reellement.
-        subject = Elision.subject(primaryDevice.name)
-        onStep(Step.WAKING_PRIMARY)
-        val primary = connect(adapter, primaryDevice)
+        // Quand la connexion existe deja, on la reprend au lieu d'en ouvrir une
+        // seconde — et on evite d'annoncer un reveil qui a deja eu lieu.
+        val primary = opened ?: run {
+            subject = Elision.subject(primaryDevice.name)
+            onStep(Step.WAKING_PRIMARY)
+            connect(adapter, primaryDevice).also { it.awaitReady(Config.READY_TIMEOUT_MS) }
+        }
 
         try {
-            primary.awaitReady(Config.READY_TIMEOUT_MS)
 
             // La secondaire peut etre debranchee ou hors de portee. Dans ce cas
             // on continue avec la principale : de la musique sur une enceinte
@@ -130,7 +132,7 @@ class PartyController(private val context: Context) {
                 secondary?.close()
             }
         } finally {
-            primary.close()
+            if (opened == null) primary.close()
         }
     }
 
@@ -156,39 +158,36 @@ class PartyController(private val context: Context) {
      * debranchee. Se fier a cette memoire ferait eteindre au lieu d'apparier.
      */
     suspend fun toggle(onStep: (Step) -> Unit) {
-        // Signale l'action sans attendre : verifier l'etat demande une connexion
-        // BLE de plusieurs secondes, pendant lesquelles l'ecran resterait muet
-        // et donnerait envie d'appuyer une seconde fois.
-        onStep(Step.CHECKING)
-
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val adapter = adapter()
 
-        val link = runCatching { connect(adapter, primaryDevice) }.getOrNull()
+        // Se connecter suffit a sortir l'enceinte de veille : c'est bien son
+        // reveil qui commence ici, autant l'annoncer plutot qu'une verification.
+        warning = null
+        subject = Elision.subject(primaryDevice.name)
+        onStep(Step.WAKING_PRIMARY)
+
+        val link = runCatching {
+            connect(adapter, primaryDevice).also { it.awaitReady(Config.READY_TIMEOUT_MS) }
+        }.getOrNull()
+
         if (link == null) {
             run(onStep)
             return
         }
 
-        val linked = runCatching {
-            link.awaitReady(Config.READY_TIMEOUT_MS)
-            link.isStereoLinked()
-        }.getOrDefault(false)
+        val linked = runCatching { link.isStereoLinked() }.getOrDefault(false)
 
-        if (linked) {
-            // La connexion est deja ouverte : l'utiliser directement fait gagner
-            // les quelques secondes d'un second etablissement de liaison.
-            try {
-                fadeAndStop(link, onStep)
-            } finally {
-                link.close()
-            }
-            stopSecondary()
-        } else {
+        try {
+            // La connexion est deja ouverte : la reprendre fait gagner les
+            // quelques secondes d'un second etablissement de liaison.
+            if (linked) fadeAndStop(link, onStep) else run(onStep, opened = link)
+        } finally {
             link.close()
-            run(onStep)
         }
+
+        if (linked) stopSecondary()
     }
 
     /**
@@ -243,11 +242,13 @@ class PartyController(private val context: Context) {
 
     /** Abaisse progressivement le volume jusqu'au silence. */
     private suspend fun fadeOut(primary: SpeakerLink) {
-        // Lecture rapide : au-dela d'un instant, mieux vaut partir du dernier
-        // niveau connu que de retarder le fondu.
-        val start = primary.readVolume(Config.VOLUME_READ_MS)
+        // Le volume du telephone pilote celui de l'enceinte une fois l'audio
+        // connecte : il donne le niveau de depart sans aucun echange Bluetooth,
+        // et le fondu commence donc immediatement.
+        val start = phoneVolumeAsLevel()
             ?: settings.lastVolume.takeIf { it > 0 }
             ?: settings.wakeVolume.takeIf { it > 0 }
+            ?: primary.readVolume(Config.VOLUME_READ_MS)
             ?: return
         if (start <= 0) return
         settings.lastVolume = start
@@ -274,8 +275,13 @@ class PartyController(private val context: Context) {
             settings.lastVolume >= 0 -> settings.lastVolume
             else -> return
         }
-        primary.write(JblProtocol.setVolume(wanted))
-        delay(200)
+        // Montee par paliers : passer du silence au niveau voulu d'un seul coup
+        // fait claquer l'amplificateur, surtout apres une extinction en fondu.
+        val steps = Config.FADE_IN_STEPS
+        for (i in 1..steps) {
+            primary.write(JblProtocol.setVolume(wanted * i / steps))
+            delay(Config.FADE_IN_STEP_MS)
+        }
 
         val balance = settings.balance
         if (balance != 0) {
@@ -311,6 +317,20 @@ class PartyController(private val context: Context) {
     private suspend fun applyBassBoost(primary: SpeakerLink) {
         primary.write(JblProtocol.setBassBoost(settings.bassBoost))
         delay(150)
+    }
+
+    /**
+     * Volume du telephone, ramene a l'echelle de l'enceinte.
+     *
+     * Une fois la liaison audio etablie, Android pilote le niveau de l'enceinte :
+     * son propre reglage est donc une bonne approximation, obtenue sans attendre.
+     */
+    private fun phoneVolumeAsLevel(): Int? {
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return null
+        val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).takeIf { it > 0 } ?: return null
+        val current = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+        return (current * JblProtocol.MAX_VOLUME / max).coerceIn(0, JblProtocol.MAX_VOLUME)
+            .takeIf { it > 0 }
     }
 
     /** Releve le canal de chaque enceinte pour pouvoir l'afficher plus tard. */

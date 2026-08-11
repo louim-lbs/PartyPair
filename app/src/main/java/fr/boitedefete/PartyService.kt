@@ -29,7 +29,7 @@ class PartyService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification(getString(Step.CHECKING.label)))
+        startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.app_name)))
 
         if (job?.isActive == true) return START_NOT_STICKY
 
@@ -206,7 +206,12 @@ class PartyService : Service() {
             // BLE prend plusieurs secondes.
             when (action) {
                 ACTION_POWER_OFF -> state.value = UiState(Step.FADING_OUT)
-                ACTION_TOGGLE, ACTION_START, ACTION_WAKE -> state.value = UiState(Step.CHECKING)
+                ACTION_TOGGLE, ACTION_START, ACTION_WAKE -> state.value = UiState(
+                    Step.WAKING_PRIMARY,
+                    // Nommer l'enceinte des le premier instant : c'est bien elle
+                    // que la connexion va reveiller.
+                    subject = Settings(context).primary?.name?.let { Elision.subject(it) }
+                )
             }
             val intent = Intent(context, PartyService::class.java).setAction(action)
             // Le systeme peut refuser un service de premier plan lance depuis

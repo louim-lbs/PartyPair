@@ -117,6 +117,9 @@ class MainActivity : ComponentActivity() {
                     var musicApp by remember { mutableStateOf(settings.musicApp) }
                     // Annuler n'a de sens que si une configuration existe deja.
                     var reconfiguring by remember { mutableStateOf(false) }
+                    // D'ou vient-on ? Le retour doit ramener a l'ecran precedent,
+                    // pas systematiquement a l'accueil.
+                    var musicPickerFrom by remember { mutableStateOf(Screen.PARTY) }
                     var updateStatus by remember { mutableStateOf<UpdateStatus?>(null) }
 
                     when {
@@ -143,7 +146,10 @@ class MainActivity : ComponentActivity() {
                             settings = settings,
                             onOpenUrl = ::openUrl,
                             onChangeSpeakers = { reconfiguring = true; screen = Screen.SETUP },
-                            onChangeMusicApp = { screen = Screen.MUSIC_PICKER },
+                            onChangeMusicApp = {
+                                musicPickerFrom = Screen.SETTINGS
+                                screen = Screen.MUSIC_PICKER
+                            },
                             onSwapChannels = {
                                 PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
                             },
@@ -169,9 +175,9 @@ class MainActivity : ComponentActivity() {
                             onPick = {
                                 settings.musicApp = it
                                 musicApp = it
-                                screen = Screen.PARTY
+                                screen = musicPickerFrom
                             },
-                            onBack = { screen = Screen.PARTY }
+                            onBack = { screen = musicPickerFrom }
                         )
 
                         else -> PartyScreen(
@@ -179,8 +185,12 @@ class MainActivity : ComponentActivity() {
                             musicApp = musicApp,
                             onPress = ::togglePower,
                             onStandby = ::standby,
-                            onOpenMusic = ::playMusic,
-                            onPickMusic = { screen = Screen.MUSIC_PICKER },
+                            onOpenMusic = ::openMusic,
+                            onPlayMusic = ::playMusic,
+                            onPickMusic = {
+                                musicPickerFrom = Screen.PARTY
+                                screen = Screen.MUSIC_PICKER
+                            },
                             onSettings = { screen = Screen.SETTINGS },
                             onCycleBass = ::cycleBassBoost,
                             onSleepTimer = ::setSleepTimer,
@@ -314,13 +324,24 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Ouvre l'application musicale.
+     * Ouvre l'application musicale, sans plus.
      *
      * Un appui explicite doit toujours ouvrir : la retenue qui evite d'interrompre
      * une ecoute en cours n'a de sens que pour un declenchement automatique.
      */
-    private fun playMusic() {
+    private fun openMusic() {
         MusicLauncher.open(this, Settings(this))
+    }
+
+    /**
+     * Ouvre la playlist et lance la lecture, si rien ne joue deja.
+     * C'est la suite naturelle d'un allumage : des enceintes pretes et silencieuses
+     * n'ont pas grand interet.
+     */
+    private fun playMusic() {
+        lifecycleScope.launch {
+            MusicLauncher.openAndPlay(this@MainActivity, Settings(this@MainActivity))
+        }
     }
 
     private fun setSleepTimer(minutes: Int?) {
@@ -455,6 +476,7 @@ private fun PartyScreen(
     onPress: () -> Unit,
     onStandby: () -> Unit,
     onOpenMusic: () -> Unit,
+    onPlayMusic: () -> Unit,
     onPickMusic: () -> Unit,
     onSettings: () -> Unit,
     onCycleBass: () -> Int,
@@ -481,7 +503,6 @@ private fun PartyScreen(
 
     val progress = when (state.step) {
         Step.IDLE, Step.FAILED -> 0f
-        Step.CHECKING -> 0.1f
         Step.WAKING_SECONDARY -> 0.25f
         Step.WAKING_PRIMARY -> 0.5f
         Step.LINKING -> 0.75f
@@ -528,7 +549,7 @@ private fun PartyScreen(
             seconds = Config.MUSIC_COUNTDOWN_SECONDS,
             onOpenNow = {
                 PartyService.musicPrompt.value = false
-                onOpenMusic()
+                onPlayMusic()
             },
             onDismiss = { PartyService.musicPrompt.value = false }
         )

@@ -36,6 +36,10 @@ object Config {
     const val FADE_STEPS = 12
     const val FADE_STEP_MS = 180L
 
+    /** Paliers de la montee du volume au reveil, pour eviter un claquement. */
+    const val FADE_IN_STEPS = 6
+    const val FADE_IN_STEP_MS = 120L
+
     /** Delai pour interroger Android sur ses connexions audio. */
     const val PROBE_TIMEOUT_MS = 4_000L
 

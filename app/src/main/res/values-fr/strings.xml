@@ -122,7 +122,6 @@
     <string name="update_failed">Impossible de vérifier pour l\'instant. Réessayez plus tard.</string>
     <string name="update_found">La version %1$s est disponible — touchez pour la télécharger.</string>
     <string name="update_downloading">Téléchargement…</string>
-    <string name="step_checking">Vérification des enceintes</string>
     <string name="playlist_name">Nom de la playlist</string>
     <string name="playlist_name_hint">Le moyen le plus fiable de lancer vraiment la bonne musique : le nom est transmis à l\'application comme une demande de lecture. Un lien ne fait qu\'ouvrir la page.</string>
     <string name="warning_no_audio">%1$s n\'a pas rejoint le téléphone pour l\'audio. Vérifiez qu\'elle est bien choisie comme sortie.</string>
