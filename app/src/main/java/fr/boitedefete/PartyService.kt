@@ -31,17 +31,19 @@ import java.util.concurrent.atomic.AtomicInteger
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-  startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.app_name)))
+  startForeground(
+  NOTIFICATION_ID,
+  buildNotification(getString(R.string.app_name))
+  )
 
   ```
    val action = intent?.action ?: ACTION_START
 
    // Les reglages rapides sont courts et sans effet de bord : les ecarter
-   // parce qu'une autre tache tourne revenait a perdre l'appui. Ils sont
-   // donc lances en parallele, et se serialisent d'eux-memes sur la
-   // liaison qu'ils partagent.
+   // parce qu'une autre tache tourne revenait a perdre l'appui.
+   // Ils sont donc lances en parallele.
    if (action in QUICK_ACTIONS) {
-       launchTask(quiet = true) { controller ->
+       launchTask(true) { controller ->
            when (action) {
                ACTION_WARM_UP -> controller.warmUp()
                ACTION_APPLY_BASS -> controller.applyBassOnly()
@@ -50,22 +52,25 @@ import java.util.concurrent.atomic.AtomicInteger
        return START_NOT_STICKY
    }
 
-   // Une sequence complete, en revanche, ne doit pas en croiser une autre.
+   // Une sequence complete ne doit pas en croiser une autre.
    if (job?.isActive == true) return START_NOT_STICKY
 
-   job = launchTask { controller ->
+   job = launchTask(false) { controller ->
        val report: (Step) -> Unit = { step ->
            state.value = UiState(
                step,
                warning = controller.warning,
                subject = controller.subject
            )
+
            if (step == Step.READY && action in PROMPTING_ACTIONS) {
                musicPrompt.value = true
            }
+
            if (step == Step.IDLE) {
                musicPrompt.value = false
            }
+
            notify(getString(step.label))
            PartyWidget.refresh(applicationContext)
        }
@@ -115,7 +120,6 @@ import java.util.concurrent.atomic.AtomicInteger
   * service sous les pieds d'une sequence encore en route.
     */
     private fun launchTask(
-    /** Un reglage rapide qui echoue ne merite pas d'alarmer l'utilisateur. */
     quiet: Boolean = false,
     block: suspend (PartyController) -> Unit
     ): Job {
@@ -132,9 +136,6 @@ import java.util.concurrent.atomic.AtomicInteger
              val message = e.message ?: getString(R.string.error_unknown)
              state.value = UiState(Step.FAILED, message)
              PartyWidget.refresh(applicationContext)
-
-             // Declenchee par une alarme, un widget ou une routine, la
-             // sequence n'a aucun ecran ou se plaindre : on previent ici.
              notifyFailure(message)
          }
      } finally {
@@ -162,7 +163,8 @@ import java.util.concurrent.atomic.AtomicInteger
     */
     private suspend fun awaitBluetooth() {
     val manager =
-    getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return
+    getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+    ?: return
 
     val deadline = System.currentTimeMillis() + Config.BLUETOOTH_WAIT_MS
 
@@ -253,16 +255,17 @@ import java.util.concurrent.atomic.AtomicInteger
   }
 
   companion object {
-  const val ACTION_START = "fr.boitedefete.action.START"
-  const val ACTION_UNLINK = "fr.boitedefete.action.UNLINK"
-  const val ACTION_POWER_OFF = "fr.boitedefete.action.POWER_OFF"
-  const val ACTION_WAKE = "fr.boitedefete.action.WAKE"
-  const val ACTION_TOGGLE = "fr.boitedefete.action.TOGGLE"
-  const val ACTION_SWAP_CHANNELS = "fr.boitedefete.action.SWAP_CHANNELS"
-  const val ACTION_APPLY_BASS = "fr.boitedefete.action.APPLY_BASS"
-  const val ACTION_WARM_UP = "fr.boitedefete.action.WARM_UP"
 
   ```
+   const val ACTION_START = "fr.boitedefete.action.START"
+   const val ACTION_UNLINK = "fr.boitedefete.action.UNLINK"
+   const val ACTION_POWER_OFF = "fr.boitedefete.action.POWER_OFF"
+   const val ACTION_WAKE = "fr.boitedefete.action.WAKE"
+   const val ACTION_TOGGLE = "fr.boitedefete.action.TOGGLE"
+   const val ACTION_SWAP_CHANNELS = "fr.boitedefete.action.SWAP_CHANNELS"
+   const val ACTION_APPLY_BASS = "fr.boitedefete.action.APPLY_BASS"
+   const val ACTION_WARM_UP = "fr.boitedefete.action.WARM_UP"
+
    /** Reglages courts, qui ne doivent jamais etre ecartes. */
    private val QUICK_ACTIONS =
        setOf(ACTION_WARM_UP, ACTION_APPLY_BASS)
@@ -324,8 +327,6 @@ import java.util.concurrent.atomic.AtomicInteger
            ACTION_WAKE -> {
                state.value = UiState(
                    Step.WAKING_PRIMARY,
-                   // Nommer l'enceinte des le premier instant : c'est bien elle
-                   // que la connexion va reveiller.
                    subject = Settings(context).primary?.name?.let {
                        Elision.subject(it)
                    }
@@ -337,8 +338,7 @@ import java.util.concurrent.atomic.AtomicInteger
            .setAction(action)
 
        // Le systeme peut refuser un service de premier plan lance depuis
-       // l'arriere-plan : on le signale sans lever d'exception, pour que
-       // l'appelant puisse se rabattre sur une autre voie.
+       // l'arriere-plan : on le signale sans lever d'exception.
        return runCatching {
            context.startForegroundService(intent)
        }.isSuccess
@@ -351,13 +351,8 @@ import java.util.concurrent.atomic.AtomicInteger
 data class UiState(
 val step: Step,
 val error: String? = null,
-
-```
 /** Precision affichee a cote de l'etat quand la sequence a abouti partiellement. */
 val warning: String? = null,
-
 /** Nom de l'enceinte concernee, insere dans le libelle de l'etape. */
 val subject: String? = null
-```
-
 )
