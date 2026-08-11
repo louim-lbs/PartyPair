@@ -95,6 +95,9 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         MusicLauncher.setForeground(false)
+        // Rendre la liaison : la garder ouverte hors de l'ecran empecherait
+        // l'application JBL de parler aux enceintes.
+        lifecycleScope.launch { WarmLink.release() }
     }
 
     override fun onResume() {
@@ -106,6 +109,11 @@ class MainActivity : ComponentActivity() {
             SleepTimer.restore(this)
             lifecycleScope.launch {
                 PartyService.refreshState(this@MainActivity)
+                // Preparer la liaison si les enceintes tournent : le premier
+                // reglage rapide sera alors immediat.
+                if (PartyService.state.value.step == Step.READY) {
+                    PartyService.start(this@MainActivity, PartyService.ACTION_WARM_UP)
+                }
                 UpdateChecker.checkQuietly(this@MainActivity)
             }
         }

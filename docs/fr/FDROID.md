@@ -53,7 +53,7 @@ et de conditionner l'appel à `UpdateChecker` sur ce champ.
 
 ### 3. Taguer chaque version
 
-Chaque publication doit correspondre à un tag Git portant le numéro de version. Pour `versionName = "1.17"`, le tag doit être `v1.17`. C'est déjà la pratique du dépôt, il suffit de s'y tenir.
+Chaque publication doit correspondre à un tag Git portant le numéro de version. Pour `versionName = "1.0.0"`, le tag doit être `v1.0.0`. C'est déjà la pratique du dépôt, il suffit de s'y tenir.
 
 ### 4. Ajouter les métadonnées Fastlane
 
@@ -73,7 +73,7 @@ fastlane/metadata/android/
     └── images/phoneScreenshots/1.png
 ```
 
-Un dossier `changelogs/` contenant `18.txt` (le `versionCode`) fournira les notes de version.
+Un dossier `changelogs/` contenant `22.txt` (le `versionCode`) fournira les notes de version.
 
 ---
 
@@ -97,17 +97,17 @@ RepoType: git
 Repo: https://github.com/louim-lbs/PartyPair.git
 
 Builds:
-  - versionName: '1.17'
-    versionCode: 18
-    commit: v1.17
+  - versionName: '1.0.0'
+    versionCode: 22
+    commit: v1.0.0
     subdir: app
     gradle:
       - fdroid
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: '1.17'
-CurrentVersionCode: 18
+CurrentVersion: '1.0.0'
+CurrentVersionCode: 22
 ```
 
 5. Ouvrir une **merge request** sur `fdroiddata` depuis cette branche.

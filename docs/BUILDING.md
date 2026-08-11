@@ -100,8 +100,8 @@ Install it over the old one — your speaker settings are preserved.
 For a proper download page you can share, and to make the in-app update check work:
 
 ```
-git tag v1.19
-git push origin v1.19
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 GitHub then creates a **Release** with the APK attached, at `https://github.com/your-name/party-pair/releases`.

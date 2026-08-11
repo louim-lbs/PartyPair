@@ -3,6 +3,7 @@ package fr.boitedefete.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
@@ -75,7 +76,7 @@ fun SettingsScreen(
     // Copie locale : l'echange doit se lire a l'ecran avant meme d'atteindre
     // les enceintes, qui peuvent etre eteintes.
     var channels by remember { mutableStateOf(settings.primaryChannel to settings.secondaryChannel) }
-    var customPicker by remember { mutableStateOf(currentAccent.startsWith("#")) }
+    var customPicker by remember { mutableStateOf(false) }
     var fromHour by remember { mutableFloatStateOf(settings.alarmFromHour.toFloat()) }
     var toHour by remember { mutableFloatStateOf(settings.alarmToHour.toFloat()) }
 
@@ -214,7 +215,9 @@ fun SettingsScreen(
                     modifier = Modifier
                         .weight(1f)
                         .padding(4.dp)
-                        .height(44.dp)
+                        // Hauteur egale a la largeur : sans cela, une largeur
+                        // repartie donne des ovales et non des pastilles.
+                        .aspectRatio(1f)
                         .background(color, CircleShape)
                         .border(
                             width = if (currentAccent == name) 3.dp else 0.dp,
@@ -230,7 +233,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .weight(1f)
                     .padding(4.dp)
-                    .height(44.dp)
+                    .aspectRatio(1f)
                     .background(
                         Brush.sweepGradient(
                             (0..360 step 45).map { hsvToColor(it.toFloat(), 0.85f, 1f) }
@@ -247,10 +250,10 @@ fun SettingsScreen(
         }
 
         if (customPicker) {
-            Spacer(Modifier.height(12.dp))
-            ColorWheel(
+            ColorPickerDialog(
                 initial = parseHex(currentAccent) ?: Party.Orange,
-                onPick = { onAccent(it.toHex()) }
+                onConfirm = { customPicker = false; onAccent(it.toHex()) },
+                onDismiss = { customPicker = false }
             )
         }
         Text(

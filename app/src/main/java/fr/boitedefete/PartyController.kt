@@ -40,6 +40,8 @@ class PartyController(private val context: Context) {
     private val settings = Settings(context)
 
     suspend fun run(onStep: (Step) -> Unit, opened: SpeakerLink? = null) {
+        // Deux clients GATT vers la meme enceinte ne serviraient a rien.
+        WarmLink.release()
         warning = null
         subject = null
 
@@ -163,6 +165,8 @@ class PartyController(private val context: Context) {
      * debranchee. Se fier a cette memoire ferait eteindre au lieu d'apparier.
      */
     suspend fun toggle(onStep: (Step) -> Unit) {
+        // Deux clients GATT vers la meme enceinte ne serviraient a rien.
+        WarmLink.release()
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val adapter = adapter()
@@ -203,6 +207,8 @@ class PartyController(private val context: Context) {
      * le retrouver au reveil suivant.
      */
     suspend fun powerOff(onStep: (Step) -> Unit) {
+        // Deux clients GATT vers la meme enceinte ne serviraient a rien.
+        WarmLink.release()
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
 
@@ -228,6 +234,7 @@ class PartyController(private val context: Context) {
         onStep(Step.FADING_OUT)
         fadeOut(primary)
         primary.write(JblProtocol.POWER_OFF)
+        restorePhoneVolume()
         onStep(Step.IDLE)
     }
 
@@ -245,15 +252,55 @@ class PartyController(private val context: Context) {
         }
     }
 
-    /** Abaisse progressivement le volume jusqu'au silence. */
+    /**
+     * Abaisse progressivement le volume jusqu'au silence.
+     *
+     * De preference par le volume du telephone : une fois l'audio connecte, il
+     * pilote celui de l'enceinte, et surtout il part du niveau reellement en
+     * cours. Deduire ce niveau puis l'imposer risquait de viser trop haut et de
+     * faire monter le son l'espace d'un instant.
+     */
     private suspend fun fadeOut(primary: SpeakerLink) {
-        // Le volume du telephone pilote celui de l'enceinte une fois l'audio
-        // connecte : il donne le niveau de depart sans aucun echange Bluetooth,
-        // et le fondu commence donc immediatement.
-        val start = phoneVolumeAsLevel()
+        if (fadeUsingPhone()) return
+        fadeUsingBluetooth(primary)
+    }
+
+    /**
+     * Fondu par le volume du telephone.
+     *
+     * Chaque palier descend depuis la valeur courante, sans jamais la depasser.
+     * Le niveau d'origine est restitue une fois l'enceinte eteinte, pour ne pas
+     * laisser le telephone muet.
+     */
+    private suspend fun fadeUsingPhone(): Boolean {
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        val start = runCatching { audio.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrNull()
+            ?: return false
+        if (start <= 0) return false
+
+        settings.lastPhoneVolume = start
+        for (i in 1..Config.FADE_STEPS) {
+            val level = start - start * i / Config.FADE_STEPS
+            runCatching { audio.setStreamVolume(AudioManager.STREAM_MUSIC, level, 0) }
+            delay(Config.FADE_STEP_MS)
+        }
+        return true
+    }
+
+    /** Restitue le volume du telephone, une fois les enceintes eteintes. */
+    private fun restorePhoneVolume() {
+        val level = settings.lastPhoneVolume.takeIf { it > 0 } ?: return
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        runCatching { audio.setStreamVolume(AudioManager.STREAM_MUSIC, level, 0) }
+        settings.lastPhoneVolume = 0
+    }
+
+    /** Repli quand le telephone n'est pas la source : on passe par le protocole. */
+    private suspend fun fadeUsingBluetooth(primary: SpeakerLink) {
+        // Ici le niveau doit etre lu, faute de mieux : le deduire risquerait de
+        // le surestimer et de faire monter le son.
+        val start = primary.readVolume(Config.VOLUME_READ_MS)
             ?: settings.lastVolume.takeIf { it > 0 }
-            ?: settings.wakeVolume.takeIf { it > 0 }
-            ?: primary.readVolume(Config.VOLUME_READ_MS)
             ?: return
         if (start <= 0) return
         settings.lastVolume = start
@@ -318,45 +365,25 @@ class PartyController(private val context: Context) {
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
 
         // Pas d'attente de disponibilite : l'enceinte joue deja, elle repond.
-        val link = connect(adapter(), primaryDevice)
-        try {
-            var sent = -1
-            // La connexion reste ouverte un court instant : appuyer plusieurs
-            // fois de suite ne doit pas rouvrir une liaison a chaque appui.
-            repeat(Config.QUICK_SETTING_ROUNDS) {
-                val wanted = settings.bassBoost
-                if (wanted != sent) {
-                    link.write(JblProtocol.setBassBoost(wanted))
-                    sent = wanted
-                }
-                delay(Config.QUICK_SETTING_GRACE_MS)
-            }
-            if (settings.bassBoost != sent) {
-                link.write(JblProtocol.setBassBoost(settings.bassBoost))
-            }
-        } finally {
-            link.close()
+        // La liaison est conservee entre deux appuis, ce qui rend le reglage
+        // immediat des le premier quand l'ecran est ouvert.
+        WarmLink.use(context, adapter(), primaryDevice) { link ->
+            link.write(JblProtocol.setBassBoost(settings.bassBoost))
         }
+    }
+
+    /** Ouvre la liaison a l'avance, pour que le premier reglage soit immediat. */
+    suspend fun warmUp() {
+        val primaryDevice = settings.primary ?: return
+        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val adapter = manager?.adapter?.takeIf { it.isEnabled } ?: return
+        WarmLink.warm(context, adapter, primaryDevice)
     }
 
     /** Applique le renforcement des graves retenu dans les reglages. */
     private suspend fun applyBassBoost(primary: SpeakerLink) {
         primary.write(JblProtocol.setBassBoost(settings.bassBoost))
         delay(150)
-    }
-
-    /**
-     * Volume du telephone, ramene a l'echelle de l'enceinte.
-     *
-     * Une fois la liaison audio etablie, Android pilote le niveau de l'enceinte :
-     * son propre reglage est donc une bonne approximation, obtenue sans attendre.
-     */
-    private fun phoneVolumeAsLevel(): Int? {
-        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return null
-        val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).takeIf { it > 0 } ?: return null
-        val current = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
-        return (current * JblProtocol.MAX_VOLUME / max).coerceIn(0, JblProtocol.MAX_VOLUME)
-            .takeIf { it > 0 }
     }
 
     /** Applique l'echange de canaux demande pendant que les enceintes dormaient. */
@@ -379,6 +406,8 @@ class PartyController(private val context: Context) {
      * Utile quand la paire a ete montee a l'envers de leur disposition reelle.
      */
     suspend fun swapChannels() {
+        // Deux clients GATT vers la meme enceinte ne serviraient a rien.
+        WarmLink.release()
         val primaryDevice = settings.primary
         val secondaryDevice = settings.secondary
         if (primaryDevice == null || secondaryDevice == null) {
@@ -471,6 +500,8 @@ class PartyController(private val context: Context) {
 
     /** Rompt la paire stereo sans eteindre. */
     suspend fun unlink() {
+        // Deux clients GATT vers la meme enceinte ne serviraient a rien.
+        WarmLink.release()
         val adapter = adapter()
         val devices = listOfNotNull(settings.secondary, settings.primary)
         if (devices.isEmpty()) {

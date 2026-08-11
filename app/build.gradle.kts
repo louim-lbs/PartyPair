@@ -20,8 +20,10 @@ android {
         applicationId = "fr.boitedefete"
         minSdk = 26
         targetSdk = 35
-        versionCode = 21
-        versionName = "1.20"
+        // Compteur interne, strictement croissant : Android refuse d'installer
+        // une version dont le code est inferieur a celle deja presente.
+        versionCode = 22
+        versionName = "1.0.0"
 
         buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
     }

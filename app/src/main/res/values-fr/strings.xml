@@ -144,4 +144,6 @@
     <string name="accent_hint">La première pastille suit votre fond d\'écran, quand le système le permet.</string>
     <string name="accent_brightness">Luminosité</string>
     <string name="accent_hex">Valeur hexadécimale</string>
+    <string name="accent_custom">Couleur personnalisée</string>
+    <string name="confirm">OK</string>
 </resources>

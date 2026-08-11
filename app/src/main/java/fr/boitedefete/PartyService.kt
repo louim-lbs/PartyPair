@@ -47,6 +47,7 @@ class PartyService : Service() {
             try {
                 when (action) {
                     ACTION_TOGGLE -> controller.toggle(report)
+                    ACTION_WARM_UP -> controller.warmUp()
                     ACTION_APPLY_BASS -> {
                         // Reglage a la volee : ni l'etat affiche ni le volume ne bougent.
                         controller.applyBassOnly()
@@ -166,6 +167,7 @@ class PartyService : Service() {
         const val ACTION_TOGGLE = "fr.boitedefete.action.TOGGLE"
         const val ACTION_SWAP_CHANNELS = "fr.boitedefete.action.SWAP_CHANNELS"
         const val ACTION_APPLY_BASS = "fr.boitedefete.action.APPLY_BASS"
+        const val ACTION_WARM_UP = "fr.boitedefete.action.WARM_UP"
 
         /** Actions issues d'un geste de l'utilisateur, qui meritent la proposition. */
         private val PROMPTING_ACTIONS = setOf(ACTION_START, ACTION_TOGGLE)
@@ -206,6 +208,7 @@ class PartyService : Service() {
             // BLE prend plusieurs secondes.
             when (action) {
                 ACTION_POWER_OFF -> state.value = UiState(Step.FADING_OUT)
+                ACTION_WARM_UP -> Unit
                 ACTION_TOGGLE, ACTION_START, ACTION_WAKE -> state.value = UiState(
                     Step.WAKING_PRIMARY,
                     // Nommer l'enceinte des le premier instant : c'est bien elle

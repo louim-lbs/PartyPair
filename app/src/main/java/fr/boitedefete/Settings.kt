@@ -70,6 +70,11 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_WAKE_VOLUME, DEFAULT_WAKE_VOLUME)
         set(value) = prefs.edit().putInt(KEY_WAKE_VOLUME, value).apply()
 
+    /** Volume du telephone releve avant le fondu, restitue apres extinction. */
+    var lastPhoneVolume: Int
+        get() = prefs.getInt(KEY_LAST_PHONE_VOLUME, 0)
+        set(value) = prefs.edit().putInt(KEY_LAST_PHONE_VOLUME, value).apply()
+
     /** Volume releve avant la mise en veille, restitue au reveil suivant. */
     var lastVolume: Int
         get() = prefs.getInt(KEY_LAST_VOLUME, -1)
@@ -246,6 +251,7 @@ class Settings(context: Context) {
         private const val KEY_PLAYLIST_NAME = "playlist_name"
         private const val KEY_WAKE_VOLUME = "wake_volume"
         private const val KEY_LAST_VOLUME = "last_volume"
+        private const val KEY_LAST_PHONE_VOLUME = "last_phone_volume"
         private const val KEY_ALARM_ENABLED = "alarm_enabled"
         private const val KEY_ALARM_LEAD = "alarm_lead"
         private const val KEY_ALARM_FROM = "alarm_from"

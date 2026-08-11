@@ -26,13 +26,6 @@ object Config {
     /** Delai d'attente de la connexion audio de l'enceinte principale. */
     const val AUDIO_TIMEOUT_MS = 25_000L
 
-    /**
-     * Fenetre pendant laquelle un reglage rapide garde sa connexion ouverte,
-     * pour que des appuis successifs n'en rouvrent pas une a chaque fois.
-     */
-    const val QUICK_SETTING_ROUNDS = 4
-    const val QUICK_SETTING_GRACE_MS = 700L
-
     /** Tentatives de connexion avant d'abandonner. */
     const val CONNECT_ATTEMPTS = 2
 

@@ -149,4 +149,6 @@
     <string name="accent_hint">The first swatch follows your wallpaper, when the system offers it.</string>
     <string name="accent_brightness">Brightness</string>
     <string name="accent_hex">Hex value</string>
+    <string name="accent_custom">Custom colour</string>
+    <string name="confirm">OK</string>
 </resources>
