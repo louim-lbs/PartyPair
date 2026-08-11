@@ -7,7 +7,9 @@ import android.app.PendingIntent
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
+import android.content.ComponentName
 import android.media.AudioManager
+import android.media.session.MediaSessionManager
 import android.net.Uri
 import android.provider.MediaStore
 import android.view.KeyEvent
@@ -76,6 +78,25 @@ object MusicLauncher {
     }
 
     /**
+     * Vrai si l'application musicale choisie detient une session media.
+     *
+     * La touche « lecture » va toujours au dernier lecteur ayant eu le focus,
+     * sans qu'on puisse la diriger. Verifier a qui elle parviendrait evite de
+     * relancer une video mise en pause a la place de la playlist attendue.
+     *
+     * La lecture des sessions demande une autorisation que l'application n'a
+     * pas : sans elle, on repond « inconnu » plutot que d'affirmer a tort.
+     */
+    private fun ownsMediaSession(context: Context, packageName: String): Boolean? {
+        val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE)
+            as? MediaSessionManager ?: return null
+        return runCatching {
+            val component = ComponentName(context, NotificationListener::class.java)
+            manager.getActiveSessions(component).any { it.packageName == packageName }
+        }.getOrNull()
+    }
+
+    /**
      * Enchaine l'ouverture et la lecture.
      *
      * Ne fait rien si une musique tourne deja : interrompre une ecoute en cours
@@ -106,11 +127,14 @@ object MusicLauncher {
 
         if (!foreground) {
             // Sans fenetre visible, aucune application ne peut etre ouverte.
-            // La touche « lecture » reste la seule voie, et elle suffit si le
-            // lecteur etait deja pose sur la bonne playlist.
-            play(context)
-            delay(2_500)
-            if (!isPlaying(context)) notifyManualStart(context)
+            // La touche « lecture » reste la seule voie — mais uniquement si
+            // elle atteindra le bon lecteur.
+            if (ownsMediaSession(context, packageName) != false) {
+                play(context)
+                delay(2_500)
+                if (isPlaying(context)) return
+            }
+            notifyManualStart(context)
             return
         }
 
@@ -135,8 +159,11 @@ object MusicLauncher {
         }
 
         if (!launch(context, packageName)) return
+        // Ouvrir d'abord donne le focus media au bon lecteur : la touche
+        // « lecture » a alors des chances de lui parvenir plutot qu'a la
+        // derniere application ayant joue quelque chose.
         delay(3_000)
-        play(context)
+        if (ownsMediaSession(context, packageName) != false) play(context)
     }
 
     /**

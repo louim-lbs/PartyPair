@@ -2,12 +2,17 @@ package fr.boitedefete.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -95,7 +100,12 @@ fun SettingsScreen(
 
         Section(stringResource(R.string.section_devices))
         Entry(stringResource(R.string.change_speakers), onClick = onChangeSpeakers)
-        Entry(stringResource(R.string.change_music_app), onClick = onChangeMusicApp)
+        // L'icone dit d'un coup d'oeil quelle application est retenue.
+        EntryWithIcon(
+            label = stringResource(R.string.change_music_app),
+            packageName = settings.musicApp,
+            onClick = onChangeMusicApp
+        )
 
         Spacer(Modifier.height(4.dp))
         Text(
@@ -386,6 +396,33 @@ private fun Section(title: String) {
     Spacer(Modifier.height(26.dp))
     Text(title.uppercase(), style = Silkscreen.copy(fontSize = 12.sp), color = Party.Muted)
     Spacer(Modifier.height(8.dp))
+}
+
+/** Entree de reglage precedee de l'icone de l'application concernee. */
+@Composable
+private fun EntryWithIcon(label: String, packageName: String?, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val icon = remember(packageName) {
+        packageName?.let {
+            runCatching {
+                context.packageManager.getApplicationIcon(it).toBitmap(96, 96).asImageBitmap()
+            }.getOrNull()
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(26.dp))
+            Spacer(Modifier.width(12.dp))
+        }
+        Text(label, style = Body.copy(fontSize = 16.sp), color = LocalAccent.current)
+    }
 }
 
 @Composable

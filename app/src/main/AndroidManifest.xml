@@ -186,6 +186,20 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!--
+            Sert uniquement a savoir quelle application detient la session media,
+            afin de ne pas relancer un autre lecteur a la place de celui choisi.
+            Aucune notification n'est lue.
+        -->
+        <service
+            android:name=".NotificationListener"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".PartyService"
             android:exported="false"

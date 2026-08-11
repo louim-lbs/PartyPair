@@ -2,7 +2,7 @@
 
 An audit of everything Party Pair exposes to the outside world, what it asks of the system, and what it does with your data.
 
-Last reviewed for version 1.0.0.
+Last reviewed for version 1.0.3.
 
 ---
 
@@ -58,6 +58,8 @@ Everything else — the foreground service, the alarm receiver, the widget provi
 | `FOREGROUND_SERVICE` | keep the sequence alive with the screen off |
 | `USE_FULL_SCREEN_INTENT` | offer to start the music on a locked screen at wake-up |
 | `REQUEST_INSTALL_PACKAGES` | see below |
+
+An optional **notification listener** service is also declared. It reads no notifications: Android only grants access to the list of active media sessions through such a service, and the app uses it solely to check whether the play key would reach your chosen music app rather than some other player. The permission is off unless you enable it in system settings, and everything works without it.
 
 No camera, no microphone, no contacts, no storage.
 
