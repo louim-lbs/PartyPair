@@ -1,0 +1,18 @@
+L'application officielle demande une dizaine de manipulations pour rétablir la liaison stéréo entre deux enceintes JBL PartyBox, et cette liaison ne survit pas à leur extinction. Party Pair le fait en un seul geste.
+
+Un bouton réveille les deux enceintes, rétablit la paire stéréo et connecte l'audio. Un second appui les rendort, avec un fondu sonore.
+
+Elle sait aussi le faire toute seule :
+
+* Réveil : les enceintes s'allument avant votre alarme et lancent votre playlist
+* Minuterie : extinction différée, avec décompte dans les notifications
+* Graves, volume, équilibre entre les enceintes, canaux gauche et droite
+* Widget, tuile de réglages rapides et raccourcis pour les routines et Home Assistant
+
+Les enceintes doivent être appairées en stéréo une fois avec l'application JBL officielle. Ensuite, Party Pair rétablit la liaison par elle-même.
+
+Le protocole BLE propriétaire des PartyBox n'était documenté nulle part. Il a été reconstitué en croisant des captures Bluetooth et la décompilation de l'application officielle, et il est entièrement décrit dans le dépôt.
+
+Vérifié sur deux JBL PartyBox 710. Le protocole devrait valoir pour toute la gamme, mais rien d'autre n'a été testé.
+
+Projet indépendant, sans lien avec Harman ou JBL.

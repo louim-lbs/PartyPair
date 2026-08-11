@@ -20,7 +20,9 @@ L'interface suit la langue du téléphone : **Boîte de Fête** en français, **
 
 ## Installation
 
-Aucune installation depuis un magasin d'applications : téléchargez l'APK depuis la [page des versions](https://github.com/louim-lbs/PartyPair/releases/latest), ouvrez-le sur le téléphone, et autorisez l'installation depuis cette source.
+Téléchargez l'APK depuis la [page des versions](https://github.com/louim-lbs/PartyPair/releases/latest), ouvrez-le sur le téléphone, et autorisez l'installation depuis cette source.
+
+> **Bientôt sur F-Droid.** Une fois disponible, tenez-vous à une seule source : les APK GitHub et F-Droid portent des signatures différentes, et Android refuse de remplacer l'un par l'autre. Changer de canal impose une désinstallation — pensez à exporter votre configuration depuis les réglages avant.
 
 Vous préférez compiler vous-même ? Voir [docs/fr/COMPILATION.md](docs/fr/COMPILATION.md).
 

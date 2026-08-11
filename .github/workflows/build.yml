@@ -29,10 +29,12 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      # La variante github garde le verificateur de mise a jour ; celle destinee
+      # a F-Droid s'en passe et n'a pas a etre compilee ici.
       - name: Compilation
         run: |
           set -o pipefail
-          gradle assembleDebug --no-daemon 2>&1 | tee build.log
+          gradle assembleGithubDebug --no-daemon 2>&1 | tee build.log
 
       # Les erreurs Kotlin sont noyees dans un journal de plusieurs centaines de
       # lignes. On les recopie ici : cette page est la premiere que l'on consulte.
@@ -58,7 +60,7 @@ jobs:
       - name: Renommer l'APK
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/debug/app-debug.apk out/party-pair.apk
+          cp app/build/outputs/apk/github/debug/app-github-debug.apk out/party-pair.apk
 
       - name: Publier l'APK
         uses: actions/upload-artifact@v4

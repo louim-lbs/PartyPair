@@ -1,0 +1,18 @@
+The official app takes a dozen steps to rebuild the stereo link between two JBL PartyBox speakers, and that link does not survive switching them off. Party Pair does it in a single tap.
+
+One button wakes both speakers, rebuilds the stereo link and connects the audio. A second tap puts them back to sleep, fading the sound out first.
+
+It can also do it on its own:
+
+* Wake-up: the speakers switch on ahead of your alarm and start your playlist
+* Sleep timer: delayed shutdown with a countdown in your notifications
+* Bass, volume, balance between the speakers, left and right channels
+* Widget, quick-settings tile and shortcuts for routines and Home Assistant
+
+The speakers must be paired in stereo once using the official JBL app. From then on, Party Pair rebuilds the link by itself.
+
+The proprietary BLE protocol used by PartyBox speakers was documented nowhere. It was reconstructed by cross-referencing Bluetooth captures with a decompilation of the official app, and is fully written up in the repository.
+
+Verified on two JBL PartyBox 710. The protocol should hold across the range, but nothing else has been tested.
+
+An independent project, unaffiliated with Harman or JBL.

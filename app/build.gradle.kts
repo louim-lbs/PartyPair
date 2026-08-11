@@ -22,8 +22,8 @@ android {
         targetSdk = 35
         // Compteur interne, strictement croissant : Android refuse d'installer
         // une version dont le code est inferieur a celle deja presente.
-        versionCode = 26
-        versionName = "1.0.4"
+        versionCode = 27
+        versionName = "1.0.5"
 
         buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
     }
@@ -40,13 +40,35 @@ android {
         }
     }
 
+    /**
+     * Deux distributions.
+     *
+     * `github` garde la verification de mise a jour : l'application y est
+     * installee a la main, personne ne la mettrait a jour autrement.
+     *
+     * `fdroid` s'en passe : le magasin s'en charge, et une application qui
+     * telecharge ses propres mises a jour y est un motif de rejet.
+     */
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("boolean", "SELF_UPDATE", "true")
+        }
+        create("fdroid") {
+            dimension = "distribution"
+            buildConfigField("boolean", "SELF_UPDATE", "false")
+        }
+    }
+
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            // Pas de signature imposee : F-Droid appose la sienne, et une
+            // publication maison passera par sa propre cle.
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

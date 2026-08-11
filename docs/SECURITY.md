@@ -2,7 +2,7 @@
 
 An audit of everything Party Pair exposes to the outside world, what it asks of the system, and what it does with your data.
 
-Last reviewed for version 1.0.4.
+Last reviewed for version 1.0.5.
 
 ---
 
@@ -74,6 +74,8 @@ No camera, no microphone, no contacts, no storage.
 - The download must be HTTPS **and** served by `github.com` or its release hosts. Redirects are followed one at a time and each hop is checked, rather than trusting the HTTP stack to land somewhere sane.
 - Android installs nothing without your explicit confirmation.
 - **Android refuses to replace an app with one signed by a different key.** Even a substituted APK could not overwrite Party Pair — it would be rejected outright.
+
+The F-Droid build drops this feature and the permission with it: `assembleFdroidRelease` produces an APK that cannot install anything.
 
 **What remains:** you are trusting the GitHub repository. If it were compromised, a malicious release could be offered to you. The signature check above limits the damage, but it is worth knowing.
 

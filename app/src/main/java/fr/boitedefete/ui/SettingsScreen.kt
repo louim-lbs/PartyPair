@@ -61,6 +61,8 @@ fun SettingsScreen(
     onSwapChannels: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
+    /** Faux sur les distributions ou un magasin gere les mises a jour. */
+    selfUpdate: Boolean,
     onCheckUpdate: () -> Unit,
     notificationsAllowed: Boolean,
     onOpenNotificationSettings: () -> Unit,
@@ -322,8 +324,10 @@ fun SettingsScreen(
         InfoRow(stringResource(R.string.info_license), "MIT")
 
         Spacer(Modifier.height(14.dp))
+        if (selfUpdate) {
             Entry(stringResource(R.string.check_update), onClick = onCheckUpdate)
-        updateStatus?.let { status ->
+        }
+        updateStatus?.takeIf { selfUpdate }?.let { status ->
             Text(
                 status.text,
                 style = Body.copy(fontSize = 13.sp),

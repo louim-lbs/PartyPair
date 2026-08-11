@@ -2,16 +2,18 @@
 
 F-Droid n'héberge pas votre APK : il **recompile l'application depuis les sources** et la signe avec sa propre clé. C'est ce qui fait sa valeur — personne n'a à vous faire confiance — et c'est aussi ce qui impose quelques ajustements.
 
-Comptez une bonne demi-journée de préparation, puis un délai variable pour la revue.
+> **Le code est déjà prêt.** Les variantes de compilation, le manifeste F-Droid
+> et les métadonnées sont en place dans le dépôt. Ne restent que les captures
+> d'écran, le test de compilation et la soumission.
 
 ---
 
 ## Vue d'ensemble
 
-| Étape | Où | Durée |
+| Étape | Où | État |
 |---|---|---|
-| 1. Préparer le projet | votre dépôt | 1–2 h |
-| 2. Écrire les métadonnées | votre dépôt | 30 min |
+| 1. Préparer le projet | votre dépôt | **fait** |
+| 2. Écrire les métadonnées | votre dépôt | **fait**, sauf les images |
 | 3. Publier une version taguée | votre dépôt | 10 min |
 | 4. Tester la compilation comme F-Droid | votre machine | 1 h |
 | 5. Soumettre | GitLab | 30 min |
@@ -19,11 +21,13 @@ Comptez une bonne demi-journée de préparation, puis un délai variable pour la
 
 ---
 
-## Étape 1 — Préparer le projet
+## Étape 1 — Préparer le projet ✅
+
+*Déjà en place dans le dépôt. Cette section décrit ce qui a été fait, pour que vous puissiez le relire ou le défaire.*
 
 ### 1.1 Retirer la clé de signature du type `release`
 
-C'est le point bloquant. Le projet fait signer la variante `release` avec la clé de débogage versionnée, or **F-Droid signe lui-même**.
+Le projet faisait signer la variante `release` avec la clé de débogage versionnée, or **F-Droid signe lui-même**.
 
 Dans `app/build.gradle.kts` :
 
@@ -100,7 +104,9 @@ Le projet n'utilise que AndroidX et Compose, tous libres. Rien ne devrait remont
 
 ---
 
-## Étape 2 — Écrire les métadonnées
+## Étape 2 — Écrire les métadonnées ✅
+
+*Les textes sont écrits. Il manque les images, que vous seul pouvez fournir.*
 
 F-Droid lit la description et les captures **depuis votre dépôt**, selon une arborescence stricte :
 
@@ -116,7 +122,7 @@ fastlane/metadata/android/
 │   │       ├── 1.png
 │   │       └── 2.png
 │   └── changelogs/
-│       └── 25.txt
+│       └── 27.txt
 └── fr-FR/
     └── (même structure)
 ```
@@ -125,7 +131,7 @@ Trois règles à respecter :
 
 - `short_description.txt` — **80 caractères maximum**, sur une seule ligne
 - `full_description.txt` — texte simple, ni Markdown ni HTML
-- `changelogs/25.txt` — le nom du fichier est le **`versionCode`**, pas le `versionName`
+- `changelogs/27.txt` — le nom du fichier est le **`versionCode`**, pas le `versionName`
 
 Exemple de `en-US/short_description.txt` :
 
@@ -133,11 +139,16 @@ Exemple de `en-US/short_description.txt` :
 Wake two JBL PartyBox speakers and link them in stereo, with one tap.
 ```
 
-Exemple de `en-US/changelogs/25.txt` :
+**Ce qu'il reste à déposer :**
 
 ```
-First F-Droid release.
+fastlane/metadata/android/en-US/images/icon.png                512 × 512
+fastlane/metadata/android/en-US/images/phoneScreenshots/1.png
+fastlane/metadata/android/fr-FR/images/icon.png
+fastlane/metadata/android/fr-FR/images/phoneScreenshots/1.png
 ```
+
+Sans au moins une capture, la fiche paraîtra vide sur F-Droid. La même image peut servir pour les deux langues.
 
 ---
 
@@ -149,8 +160,8 @@ Chaque version F-Droid correspond à un tag Git.
 git add .
 git commit -m "Prepare F-Droid release"
 git push
-git tag v1.0.3
-git push origin v1.0.3
+git tag v1.0.5
+git push origin v1.0.5
 ```
 
 Le tag doit porter exactement le `versionName`, et le commit taggé doit contenir le `versionCode` correspondant. F-Droid vérifie cette correspondance.
@@ -183,17 +194,17 @@ RepoType: git
 Repo: https://github.com/louim-lbs/PartyPair.git
 
 Builds:
-  - versionName: 1.0.3
-    versionCode: 25
-    commit: v1.0.3
+  - versionName: 1.0.5
+    versionCode: 27
+    commit: v1.0.5
     subdir: app
     gradle:
       - fdroid
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.0.3
-CurrentVersionCode: 25
+CurrentVersion: 1.0.5
+CurrentVersionCode: 27
 ```
 
 Puis lancez la compilation :

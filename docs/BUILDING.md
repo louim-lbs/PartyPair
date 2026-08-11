@@ -116,10 +116,21 @@ From the command line:
 
 ```bash
 gradle wrapper          # once, to generate the wrapper
-./gradlew assembleDebug
+./gradlew assembleGithubDebug
 ```
 
-The APK lands in `app/build/outputs/apk/debug/`.
+The APK lands in `app/build/outputs/apk/github/debug/`.
+
+### Build variants
+
+Two distributions are defined. **github** keeps the built-in update checker; **fdroid** drops it, along with the install permission, because F-Droid handles updates itself.
+
+| Task | Output |
+|---|---|
+| `assembleGithubDebug` | the APK published on the releases page |
+| `assembleFdroidRelease` | what F-Droid compiles, unsigned |
+
+In Android Studio, pick the variant from the **Build Variants** panel on the left.
 
 The project targets API 35 and runs on Android 8 and later.
 

@@ -127,8 +127,21 @@ En ligne de commande :
 
 ```bash
 gradle wrapper          # une seule fois, pour générer le wrapper
-./gradlew assembleDebug
+./gradlew assembleGithubDebug
 ```
+
+L'APK se trouve dans `app/build/outputs/apk/github/debug/`.
+
+### Variantes de compilation
+
+Deux distributions sont définies. **github** garde le vérificateur de mise à jour intégré ; **fdroid** s'en passe, ainsi que de la permission d'installation, puisque F-Droid gère lui-même les mises à jour.
+
+| Tâche | Sortie |
+|---|---|
+| `assembleGithubDebug` | l'APK publié sur la page des versions |
+| `assembleFdroidRelease` | ce que F-Droid compile, non signé |
+
+Dans Android Studio, le choix se fait dans le panneau **Build Variants**, à gauche.
 
 L'APK se trouve dans `app/build/outputs/apk/debug/`.
 

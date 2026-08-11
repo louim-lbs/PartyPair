@@ -114,7 +114,12 @@ class MainActivity : ComponentActivity() {
                 if (PartyService.state.value.step == Step.READY) {
                     PartyService.start(this@MainActivity, PartyService.ACTION_WARM_UP)
                 }
-                UpdateChecker.checkQuietly(this@MainActivity)
+                // Sur les distributions gerees par un magasin, la verification
+                // n'a pas lieu d'etre : c'est lui qui met a jour.
+                if (BuildConfig.SELF_UPDATE) {
+                    // Absent de la variante F-Droid, qui gere ses propres mises a jour.
+                if (BuildConfig.SELF_UPDATE) UpdateChecker.checkQuietly(this@MainActivity)
+                }
             }
         }
     }
@@ -180,6 +185,7 @@ class MainActivity : ComponentActivity() {
                             onSwapChannels = {
                                 PartyService.start(this, PartyService.ACTION_SWAP_CHANNELS)
                             },
+                            selfUpdate = BuildConfig.SELF_UPDATE,
                             onCheckUpdate = { checkUpdate { updateStatus = it } },
                             notificationsAllowed = SleepTimer.notificationsAllowed(context),
                             onOpenNotificationSettings = ::openNotificationSettings,

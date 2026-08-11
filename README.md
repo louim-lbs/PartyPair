@@ -20,7 +20,9 @@ The interface follows your phone's language: **Party Pair** in English, **Boîte
 
 ## Install
 
-Not on any app store: download the APK from the [releases page](https://github.com/louim-lbs/PartyPair/releases/latest), open it on your phone, and allow installation from that source.
+Download the APK from the [releases page](https://github.com/louim-lbs/PartyPair/releases/latest), open it on your phone, and allow installation from that source.
+
+> **Coming to F-Droid.** Once it lands there, pick one source and stay with it: builds from GitHub and from F-Droid carry different signatures, and Android will not let one replace the other. Switching means uninstalling first, so export your setup from the settings beforehand.
 
 Prefer to build it yourself? See [docs/BUILDING.md](docs/BUILDING.md).
 
@@ -49,6 +51,7 @@ Android 8 or later. Language selection and per-app language need Android 13.
 | [Building](docs/BUILDING.md) | From Windows with VS Code, or locally |
 | [The protocol](docs/PROTOCOL.md) | The full reverse engineering of the PartyBox BLE protocol |
 | [Security](docs/SECURITY.md) | What the app exposes, asks for, and stores |
+| [Publishing on F-Droid](docs/fr/FDROID.md) | Submission walkthrough *(French)* |
 
 ## How it works
 
