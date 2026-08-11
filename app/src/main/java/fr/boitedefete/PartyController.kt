@@ -97,7 +97,13 @@ class PartyController(private val context: Context) {
                     delay(Config.LINK_SETTLE_MS)
                 }
 
-                if (secondary != null) rememberChannels(primary, secondary)
+                if (secondary != null) {
+                    if (settings.pendingChannelSwap) {
+                        applyPendingChannels(primary, secondary)
+                    } else {
+                        rememberChannels(primary, secondary)
+                    }
+                }
 
                 var audioConnected = true
                 if (phoneMac.isNotBlank()) {
@@ -310,10 +316,24 @@ class PartyController(private val context: Context) {
     suspend fun applyBassOnly() {
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
+
+        // Pas d'attente de disponibilite : l'enceinte joue deja, elle repond.
         val link = connect(adapter(), primaryDevice)
         try {
-            link.awaitReady(Config.READY_TIMEOUT_MS)
-            applyBassBoost(link)
+            var sent = -1
+            // La connexion reste ouverte un court instant : appuyer plusieurs
+            // fois de suite ne doit pas rouvrir une liaison a chaque appui.
+            repeat(Config.QUICK_SETTING_ROUNDS) {
+                val wanted = settings.bassBoost
+                if (wanted != sent) {
+                    link.write(JblProtocol.setBassBoost(wanted))
+                    sent = wanted
+                }
+                delay(Config.QUICK_SETTING_GRACE_MS)
+            }
+            if (settings.bassBoost != sent) {
+                link.write(JblProtocol.setBassBoost(settings.bassBoost))
+            }
         } finally {
             link.close()
         }
@@ -339,6 +359,15 @@ class PartyController(private val context: Context) {
             .takeIf { it > 0 }
     }
 
+    /** Applique l'echange de canaux demande pendant que les enceintes dormaient. */
+    private suspend fun applyPendingChannels(primary: SpeakerLink, secondary: SpeakerLink) {
+        primary.write(JblProtocol.setChannel(settings.primaryChannel.toByte()))
+        delay(Config.INTER_WRITE_DELAY_MS)
+        secondary.write(JblProtocol.setChannel(settings.secondaryChannel.toByte()))
+        delay(Config.INTER_WRITE_DELAY_MS)
+        settings.pendingChannelSwap = false
+    }
+
     /** Releve le canal de chaque enceinte pour pouvoir l'afficher plus tard. */
     private suspend fun rememberChannels(primary: SpeakerLink, secondary: SpeakerLink) {
         primary.readChannel()?.let { settings.primaryChannel = it.toInt() and 0xFF }
@@ -355,7 +384,6 @@ class PartyController(private val context: Context) {
         if (primaryDevice == null || secondaryDevice == null) {
             throw SpeakerException(context.getString(R.string.error_not_configured))
         }
-        val adapter = adapter()
 
         val primaryTarget = if (settings.primaryChannel == 1) {
             JblProtocol.CHANNEL_RIGHT
@@ -368,20 +396,31 @@ class PartyController(private val context: Context) {
             JblProtocol.CHANNEL_LEFT
         }
 
-        listOf(primaryDevice to primaryTarget, secondaryDevice to secondaryTarget)
-            .forEach { (device, channel) ->
-                val link = connect(adapter, device)
-                try {
-                    link.awaitReady(Config.READY_TIMEOUT_MS)
-                    link.write(JblProtocol.setChannel(channel))
-                    delay(Config.INTER_WRITE_DELAY_MS)
-                } finally {
-                    link.close()
-                }
-            }
-
+        // L'intention est enregistree tout de suite, pour que l'ecran reponde
+        // sans attendre une liaison Bluetooth.
         settings.primaryChannel = primaryTarget.toInt()
         settings.secondaryChannel = secondaryTarget.toInt()
+
+        // Des enceintes eteintes ne doivent pas se rallumer pour si peu :
+        // l'echange sera applique au prochain allumage.
+        if (!isAlreadyOn()) {
+            settings.pendingChannelSwap = true
+            return
+        }
+
+        val adapter = adapter()
+        runCatching {
+            listOf(primaryDevice to primaryTarget, secondaryDevice to secondaryTarget)
+                .forEach { (device, channel) ->
+                    val link = connect(adapter, device)
+                    try {
+                        link.write(JblProtocol.setChannel(channel))
+                        delay(Config.INTER_WRITE_DELAY_MS)
+                    } finally {
+                        link.close()
+                    }
+                }
+        }.onFailure { settings.pendingChannelSwap = true }
     }
 
     /**

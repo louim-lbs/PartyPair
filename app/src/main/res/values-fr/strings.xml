@@ -142,4 +142,6 @@
     <string name="music_manual_text">Touchez pour lancer votre playlist.</string>
     <string name="section_accent">Couleur d\'accent</string>
     <string name="accent_hint">La première pastille suit votre fond d\'écran, quand le système le permet.</string>
+    <string name="accent_brightness">Luminosité</string>
+    <string name="accent_hex">Valeur hexadécimale</string>
 </resources>

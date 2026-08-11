@@ -56,6 +56,7 @@ import fr.boitedefete.ui.ControlRow
 import fr.boitedefete.ui.CountdownDialog
 import fr.boitedefete.ui.Display
 import fr.boitedefete.ui.LocalAccent
+import fr.boitedefete.ui.parseHex
 import fr.boitedefete.ui.DriverButton
 import fr.boitedefete.ui.MusicAppPicker
 import fr.boitedefete.ui.MusicButton
@@ -120,6 +121,7 @@ class MainActivity : ComponentActivity() {
             var accentName by remember { mutableStateOf(settingsStore.accent) }
             val dynamic = dynamicAccent()
             val accent = when {
+                accentName.startsWith("#") -> parseHex(accentName) ?: Party.Orange
                 accentName == Settings.ACCENT_DYNAMIC && dynamic != null -> dynamic
                 else -> ACCENTS[accentName] ?: ACCENTS.getValue(Settings.DEFAULT_ACCENT)
             }
@@ -358,8 +360,12 @@ class MainActivity : ComponentActivity() {
      * n'ont pas grand interet.
      */
     private fun playMusic() {
+        val settings = Settings(this)
+        // La playlist appartient au reveil : en dehors de ses horaires, on se
+        // contente de relancer ce qui etait en cours.
+        val morning = AlarmScheduler.inMorningWindow(System.currentTimeMillis(), settings)
         lifecycleScope.launch {
-            MusicLauncher.openAndPlay(this@MainActivity, Settings(this@MainActivity))
+            MusicLauncher.openAndPlay(this@MainActivity, settings, usePlaylist = morning)
         }
     }
 

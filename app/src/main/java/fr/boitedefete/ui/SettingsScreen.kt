@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -71,6 +72,10 @@ fun SettingsScreen(
     var url by remember { mutableStateOf(settings.musicUrl) }
     var playlistName by remember { mutableStateOf(settings.playlistName) }
     var balance by remember { mutableFloatStateOf(settings.balance.toFloat()) }
+    // Copie locale : l'echange doit se lire a l'ecran avant meme d'atteindre
+    // les enceintes, qui peuvent etre eteintes.
+    var channels by remember { mutableStateOf(settings.primaryChannel to settings.secondaryChannel) }
+    var customPicker by remember { mutableStateOf(currentAccent.startsWith("#")) }
     var fromHour by remember { mutableFloatStateOf(settings.alarmFromHour.toFloat()) }
     var toHour by remember { mutableFloatStateOf(settings.alarmToHour.toFloat()) }
 
@@ -93,11 +98,14 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(4.dp))
         Text(
-            channelSummary(settings),
+            channelSummary(settings, channels.first),
             style = Body.copy(fontSize = 14.sp),
             color = Party.Muted
         )
-        Entry(stringResource(R.string.swap_channels), onClick = onSwapChannels)
+        Entry(stringResource(R.string.swap_channels)) {
+            channels = channels.second to channels.first
+            onSwapChannels()
+        }
 
         Section(stringResource(R.string.section_playback))
         Text(
@@ -213,9 +221,37 @@ fun SettingsScreen(
                             color = Party.Silkscreen,
                             shape = CircleShape
                         )
-                        .clickable { onAccent(name) }
+                        .clickable { customPicker = false; onAccent(name) }
                 )
             }
+
+            // Derniere pastille : la teinte libre, reconnaissable a son degrade.
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(4.dp)
+                    .height(44.dp)
+                    .background(
+                        Brush.sweepGradient(
+                            (0..360 step 45).map { hsvToColor(it.toFloat(), 0.85f, 1f) }
+                        ),
+                        CircleShape
+                    )
+                    .border(
+                        width = if (currentAccent.startsWith("#")) 3.dp else 0.dp,
+                        color = Party.Silkscreen,
+                        shape = CircleShape
+                    )
+                    .clickable { customPicker = true }
+            )
+        }
+
+        if (customPicker) {
+            Spacer(Modifier.height(12.dp))
+            ColorWheel(
+                initial = parseHex(currentAccent) ?: Party.Orange,
+                onPick = { onAccent(it.toHex()) }
+            )
         }
         Text(
             stringResource(R.string.accent_hint),
@@ -304,10 +340,10 @@ fun SettingsScreen(
 
 /** « Cécile à gauche, Hildegarde à droite », si les canaux sont connus. */
 @Composable
-private fun channelSummary(settings: Settings): String {
+private fun channelSummary(settings: Settings, primaryChannel: Int): String {
     val primary = settings.primary?.name ?: return stringResource(R.string.channels_unknown)
     val secondary = settings.secondary?.name ?: return stringResource(R.string.channels_unknown)
-    return when (settings.primaryChannel) {
+    return when (primaryChannel) {
         1 -> stringResource(R.string.channels_known, primary, secondary)
         2 -> stringResource(R.string.channels_known, secondary, primary)
         else -> stringResource(R.string.channels_unknown)

@@ -20,8 +20,8 @@ android {
         applicationId = "fr.boitedefete"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.19"
+        versionCode = 21
+        versionName = "1.20"
 
         buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
     }

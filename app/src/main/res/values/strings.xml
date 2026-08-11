@@ -147,4 +147,6 @@
     <string name="music_manual_text">Tap to start your playlist.</string>
     <string name="section_accent">Accent colour</string>
     <string name="accent_hint">The first swatch follows your wallpaper, when the system offers it.</string>
+    <string name="accent_brightness">Brightness</string>
+    <string name="accent_hex">Hex value</string>
 </resources>

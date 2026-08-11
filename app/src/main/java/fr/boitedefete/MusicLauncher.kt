@@ -95,7 +95,12 @@ object MusicLauncher {
         foreground = visible
     }
 
-    suspend fun openAndPlay(context: Context, settings: Settings) {
+    /**
+     * @param usePlaylist quand c'est faux, on se contente d'ouvrir le lecteur et
+     *   de reprendre la lecture. Imposer la playlist du reveil un soir de semaine
+     *   n'aurait aucun sens.
+     */
+    suspend fun openAndPlay(context: Context, settings: Settings, usePlaylist: Boolean = true) {
         if (isPlaying(context)) return
         val packageName = settings.musicApp ?: return
 
@@ -111,12 +116,15 @@ object MusicLauncher {
 
         // Une application peut accepter l'intention sans rien jouer : on juge au
         // resultat plutot qu'a la reponse du systeme.
-        if (playFromSearch(context, packageName, settings.playlistName)) {
+        val playlistName = if (usePlaylist) settings.playlistName else ""
+        val playlistUrl = if (usePlaylist) settings.musicUrl else ""
+
+        if (playFromSearch(context, packageName, playlistName)) {
             delay(5_000)
             if (isPlaying(context)) return
         }
 
-        if (settings.musicUrl.isNotBlank() && openUrl(context, packageName, settings.musicUrl)) {
+        if (playlistUrl.isNotBlank() && openUrl(context, packageName, playlistUrl)) {
             delay(4_000)
             if (isPlaying(context)) return
             // La playlist est affichee mais silencieuse : la touche « lecture »

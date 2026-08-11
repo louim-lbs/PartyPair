@@ -88,6 +88,16 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_PRIMARY_CHANNEL, 0)
         set(value) = prefs.edit().putInt(KEY_PRIMARY_CHANNEL, value).apply()
 
+    /**
+     * Un echange de canaux attend d'etre applique.
+     *
+     * Demander l'inversion alors que les enceintes dorment ne doit pas les
+     * reveiller : l'intention est retenue, et honoree au prochain allumage.
+     */
+    var pendingChannelSwap: Boolean
+        get() = prefs.getBoolean(KEY_PENDING_SWAP, false)
+        set(value) = prefs.edit().putBoolean(KEY_PENDING_SWAP, value).apply()
+
     /** Canal releve sur l'enceinte secondaire. */
     var secondaryChannel: Int
         get() = prefs.getInt(KEY_SECONDARY_CHANNEL, 0)
@@ -254,6 +264,7 @@ class Settings(context: Context) {
         const val ACCENT_DYNAMIC = "auto"
         private const val KEY_PRIMARY_CHANNEL = "primary_channel"
         private const val KEY_SECONDARY_CHANNEL = "secondary_channel"
+        private const val KEY_PENDING_SWAP = "pending_channel_swap"
 
         /** Ecart maximal entre les deux enceintes, sur l'echelle 0-32. */
         const val MAX_BALANCE = 8
