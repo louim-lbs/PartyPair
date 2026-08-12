@@ -146,4 +146,8 @@
     <string name="accent_hex">Valeur hexadécimale</string>
     <string name="accent_custom">Couleur personnalisée</string>
     <string name="confirm">OK</string>
+    <string name="step_connecting">Connexion aux enceintes</string>
+    <string name="step_waiting_track">Attente de la fin du morceau</string>
+    <string name="sleep_after_track">Extinction à la fin de ce morceau.</string>
+    <string name="sleep_stop_now">Éteindre</string>
 </resources>

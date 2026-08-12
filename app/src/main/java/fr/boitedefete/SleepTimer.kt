@@ -25,6 +25,7 @@ object SleepTimer {
     private const val REQUEST_CODE = 4202
     private const val CANCEL_REQUEST_CODE = 4203
     private const val TICK_REQUEST_CODE = 4204
+    private const val STOP_NOW_REQUEST_CODE = 4205
     private const val CHANNEL_ID = "sleep"
     private const val NOTIFICATION_ID = 4
 
@@ -72,6 +73,14 @@ object SleepTimer {
         runCatching { manager.cancel(tickIntent(context)) }
     }
 
+    /** Interrompt le decompte sans toucher a la notification en cours. */
+    fun stopTicking(context: Context) {
+        Settings(context).sleepAt = 0L
+        deadline.value = 0L
+        val manager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        runCatching { manager.cancel(tickIntent(context)) }
+    }
+
     /** Minutes restantes, arrondies a la minute superieure, ou null s'il n'y a rien. */
     fun remainingMinutes(context: Context): Int? = remainingMinutes(Settings(context).sleepAt)
 
@@ -100,6 +109,38 @@ object SleepTimer {
         scheduleTick(context)
     }
 
+    /**
+     * Signale que l'echeance est atteinte mais qu'on laisse finir le morceau.
+     *
+     * Sans ce message, l'attente passerait pour un blocage. Un bouton permet de
+     * ne pas patienter.
+     */
+    fun showWaitingForTrack(context: Context) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
+            as? NotificationManager ?: return
+        ensureChannel(context, manager)
+
+        val stopNow = Notification.Action.Builder(
+            Icon.createWithResource(context, R.drawable.ic_driver),
+            context.getString(R.string.sleep_stop_now),
+            broadcast(context, STOP_NOW_REQUEST_CODE, AlarmReceiver.ACTION_STOP_NOW)
+        ).build()
+
+        val notification = Notification.Builder(context, CHANNEL_ID)
+            .setContentTitle(context.getString(R.string.sleep_notification_title))
+            .setContentText(context.getString(R.string.sleep_after_track))
+            .setSmallIcon(R.drawable.ic_driver)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setContentIntent(openApp(context))
+            .addAction(stopNow)
+            .addAction(cancelAction(context))
+            .build()
+
+        runCatching { manager.notify(NOTIFICATION_ID, notification) }
+    }
+
     fun dismiss(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
             as? NotificationManager ?: return
@@ -125,21 +166,7 @@ object SleepTimer {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
             as? NotificationManager ?: return
 
-        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-            manager.createNotificationChannel(
-                NotificationChannel(
-                    CHANNEL_ID,
-                    context.getString(R.string.channel_sleep),
-                    NotificationManager.IMPORTANCE_LOW
-                )
-            )
-        }
-
-        val cancelAction = Notification.Action.Builder(
-            Icon.createWithResource(context, R.drawable.ic_driver),
-            context.getString(R.string.sleep_cancel),
-            broadcast(context, CANCEL_REQUEST_CODE, AlarmReceiver.ACTION_CANCEL_SLEEP)
-        ).build()
+        ensureChannel(context, manager)
 
         val notification = Notification.Builder(context, CHANNEL_ID)
             .setContentTitle(context.getString(R.string.sleep_notification_title))
@@ -148,19 +175,37 @@ object SleepTimer {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-            .setContentIntent(
-                PendingIntent.getActivity(
-                    context,
-                    0,
-                    Intent(context, MainActivity::class.java),
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-            )
-            .addAction(cancelAction)
+            .setContentIntent(openApp(context))
+            .addAction(cancelAction(context))
             .build()
 
         runCatching { manager.notify(NOTIFICATION_ID, notification) }
     }
+
+    private fun ensureChannel(context: Context, manager: NotificationManager) {
+        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.channel_sleep),
+                NotificationManager.IMPORTANCE_LOW
+            )
+        )
+    }
+
+    private fun cancelAction(context: Context): Notification.Action =
+        Notification.Action.Builder(
+            Icon.createWithResource(context, R.drawable.ic_driver),
+            context.getString(R.string.sleep_cancel),
+            broadcast(context, CANCEL_REQUEST_CODE, AlarmReceiver.ACTION_CANCEL_SLEEP)
+        ).build()
+
+    private fun openApp(context: Context): PendingIntent = PendingIntent.getActivity(
+        context,
+        0,
+        Intent(context, MainActivity::class.java),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
 
     private fun endIntent(context: Context) =
         broadcast(context, REQUEST_CODE, AlarmReceiver.ACTION_SLEEP)

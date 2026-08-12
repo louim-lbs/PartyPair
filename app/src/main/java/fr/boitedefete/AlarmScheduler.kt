@@ -98,8 +98,13 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             ACTION_SLEEP -> {
-                Settings(context).sleepAt = 0L
-                SleepTimer.dismiss(context)
+                // Le service decide s'il faut laisser finir le morceau : cette
+                // attente n'a pas sa place dans un recepteur de diffusion.
+                SleepTimer.stopTicking(context)
+                PartyService.start(context, PartyService.ACTION_SLEEP_DUE)
+            }
+            ACTION_STOP_NOW -> {
+                SleepTimer.cancel(context)
                 PartyService.start(context, PartyService.ACTION_POWER_OFF)
             }
             ACTION_CANCEL_SLEEP -> SleepTimer.cancel(context)
@@ -117,6 +122,7 @@ class AlarmReceiver : BroadcastReceiver() {
         const val ACTION_WAKE = "fr.boitedefete.action.ALARM_WAKE"
         const val ACTION_SLEEP = "fr.boitedefete.action.ALARM_SLEEP"
         const val ACTION_CANCEL_SLEEP = "fr.boitedefete.action.CANCEL_SLEEP"
+        const val ACTION_STOP_NOW = "fr.boitedefete.action.STOP_NOW"
         const val ACTION_SLEEP_TICK = "fr.boitedefete.action.SLEEP_TICK"
     }
 }

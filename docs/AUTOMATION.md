@@ -131,6 +131,16 @@ Expose the script as a `shell_command` or over MQTT, and Home Assistant drives t
 
 ---
 
+## Sleep timer
+
+When the timer runs out, the app looks at what is playing. If **less than three minutes** remain on the current track, it lets the track finish before fading out — cutting off a song that is nearly over is needlessly abrupt. Beyond that, or when the remaining time cannot be read, it switches off straight away.
+
+While waiting, the notification says so and offers a **Switch off** button.
+
+Starting another track during that wait resets the wait to the new one, whatever its length: choosing a track then is a deliberate "one more song". A pause is given thirty seconds before concluding — a phone call is not the end of listening.
+
+Reading playback progress requires the notification access permission. Without it the timer simply switches off at the deadline.
+
 ## Backup
 
 The settings offer to copy your configuration to the clipboard and restore it by pasting. Useful before changing phones.

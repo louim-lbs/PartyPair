@@ -1,0 +1,1 @@
+La minuterie laisse finir le morceau en cours s'il est presque terminé.

@@ -17,6 +17,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Etapes de la sequence. Le libelle suit la langue du telephone. */
 enum class Step(@StringRes val label: Int) {
     IDLE(R.string.step_idle),
+    CONNECTING(R.string.step_connecting),
+    WAITING_TRACK(R.string.step_waiting_track),
     WAKING_SECONDARY(R.string.step_waking_named),
     WAKING_PRIMARY(R.string.step_waking_named),
     LINKING(R.string.step_linking),
@@ -171,11 +173,11 @@ class PartyController(private val context: Context) {
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
         val adapter = adapter()
 
-        // Se connecter suffit a sortir l'enceinte de veille : c'est bien son
-        // reveil qui commence ici, autant l'annoncer plutot qu'une verification.
+        // Tant qu'on ignore si la paire tient, on ne peut annoncer ni reveil ni
+        // extinction : dire « Reveil de Cecile » avant d'eteindre serait faux.
         warning = null
-        subject = Elision.subject(primaryDevice.name)
-        onStep(Step.WAKING_PRIMARY)
+        subject = null
+        onStep(Step.CONNECTING)
 
         val link = runCatching {
             connect(adapter, primaryDevice).also { it.awaitReady(Config.READY_TIMEOUT_MS) }

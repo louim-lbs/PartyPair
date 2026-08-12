@@ -151,4 +151,8 @@
     <string name="accent_hex">Hex value</string>
     <string name="accent_custom">Custom colour</string>
     <string name="confirm">OK</string>
+    <string name="step_connecting">Reaching the speakers</string>
+    <string name="step_waiting_track">Waiting for the track to end</string>
+    <string name="sleep_after_track">Switching off when this track ends.</string>
+    <string name="sleep_stop_now">Switch off</string>
 </resources>

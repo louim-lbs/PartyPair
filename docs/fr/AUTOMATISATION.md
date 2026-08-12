@@ -129,6 +129,16 @@ Exposez le script en `shell_command` ou via MQTT, et Home Assistant pilote les e
 
 ---
 
+## Minuterie
+
+À l'échéance, l'application regarde ce qui est en cours de lecture. S'il reste **moins de trois minutes** sur le morceau, elle le laisse finir avant le fondu — couper un titre presque terminé est inutilement brutal. Au-delà, ou si le temps restant n'est pas lisible, elle éteint tout de suite.
+
+Pendant l'attente, la notification l'indique et propose un bouton **Éteindre**.
+
+Lancer un autre morceau pendant cette attente relance l'attente sur le nouveau, quelle que soit sa longueur : choisir un titre à ce moment-là, c'est vouloir un dernier morceau. Une pause bénéficie de trente secondes avant de conclure — un appel téléphonique n'est pas une fin d'écoute.
+
+La lecture de la progression demande l'autorisation d'accès aux notifications. Sans elle, la minuterie éteint simplement à l'échéance.
+
 ## Sauvegarde
 
 Les réglages proposent de copier la configuration dans le presse-papiers et de la restaurer par collage. Utile avant de changer de téléphone.

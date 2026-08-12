@@ -129,6 +129,7 @@
             android:name=".AlarmReceiver"
             android:exported="false">
             <intent-filter>
+                <action android:name="fr.boitedefete.action.STOP_NOW" />
                 <action android:name="android.app.action.NEXT_ALARM_CLOCK_CHANGED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />

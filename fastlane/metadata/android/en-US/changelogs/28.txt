@@ -1,0 +1,1 @@
+Sleep timer now lets the current track finish when it is nearly over.

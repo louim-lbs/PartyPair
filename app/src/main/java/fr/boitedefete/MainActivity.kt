@@ -550,10 +550,12 @@ private fun PartyScreen(
 
     val progress = when (state.step) {
         Step.IDLE, Step.FAILED -> 0f
+        Step.CONNECTING -> 0.15f
         Step.WAKING_PRIMARY -> 0.25f
         Step.WAKING_SECONDARY -> 0.5f
         Step.LINKING -> 0.75f
         Step.CONNECTING_AUDIO -> 0.9f
+        Step.WAITING_TRACK -> 1f
         Step.FADING_OUT, Step.POWERING_OFF -> 0.15f
         Step.READY -> 1f
     }

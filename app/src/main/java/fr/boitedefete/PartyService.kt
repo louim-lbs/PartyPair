@@ -76,6 +76,21 @@ class PartyService : Service() {
                     MusicLauncher.openAndPlay(applicationContext, Settings(applicationContext))
                 }
                 ACTION_POWER_OFF -> controller.powerOff(report)
+                ACTION_SLEEP_DUE -> {
+                    // Couper au milieu d'un morceau presque fini est desagreable :
+                    // on le laisse s'achever quand il ne reste que quelques instants.
+                    if (PlaybackWatcher.verdict(applicationContext) ==
+                        PlaybackWatcher.Verdict.WAIT_FOR_TRACK
+                    ) {
+                        report(Step.WAITING_TRACK)
+                        SleepTimer.showWaitingForTrack(applicationContext)
+                        PlaybackWatcher.awaitTrackEnd(applicationContext) {
+                            SleepTimer.showWaitingForTrack(applicationContext)
+                        }
+                    }
+                    SleepTimer.dismiss(applicationContext)
+                    controller.powerOff(report)
+                }
                 ACTION_UNLINK -> {
                     report(Step.LINKING)
                     controller.unlink()
@@ -202,6 +217,7 @@ class PartyService : Service() {
         const val ACTION_SWAP_CHANNELS = "fr.boitedefete.action.SWAP_CHANNELS"
         const val ACTION_APPLY_BASS = "fr.boitedefete.action.APPLY_BASS"
         const val ACTION_WARM_UP = "fr.boitedefete.action.WARM_UP"
+        const val ACTION_SLEEP_DUE = "fr.boitedefete.action.SLEEP_DUE"
 
         /** Reglages courts, qui ne doivent jamais etre ecartes. */
         private val QUICK_ACTIONS = setOf(ACTION_WARM_UP, ACTION_APPLY_BASS)
@@ -245,8 +261,12 @@ class PartyService : Service() {
             // BLE prend plusieurs secondes.
             when (action) {
                 ACTION_POWER_OFF -> state.value = UiState(Step.FADING_OUT)
+                // L'issue depend de la lecture en cours : rien a annoncer encore.
+                ACTION_SLEEP_DUE -> Unit
                 ACTION_WARM_UP -> Unit
-                ACTION_TOGGLE, ACTION_START, ACTION_WAKE -> state.value = UiState(
+                // La bascule ignore encore ce qu'elle va faire : rien a annoncer.
+                ACTION_TOGGLE -> state.value = UiState(Step.CONNECTING)
+                ACTION_START, ACTION_WAKE -> state.value = UiState(
                     Step.WAKING_PRIMARY,
                     // Nommer l'enceinte des le premier instant : c'est bien elle
                     // que la connexion va reveiller.
