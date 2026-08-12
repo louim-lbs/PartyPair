@@ -1,0 +1,1 @@
+Sleep timer offers to switch the speakers on first, and clears its notification.

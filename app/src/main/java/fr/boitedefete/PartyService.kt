@@ -86,6 +86,10 @@ class PartyService : Service() {
                 }
                 ACTION_POWER_OFF -> controller.powerOff(report)
                 ACTION_SLEEP_DUE -> {
+                    // Le decompte est termine, quelle que soit la suite : sa
+                    // notification n'a plus lieu d'etre affichee.
+                    SleepTimer.dismiss(applicationContext)
+
                     // Couper au milieu d'un morceau presque fini est desagreable :
                     // on le laisse s'achever quand il ne reste que quelques instants.
                     if (PlaybackWatcher.verdict(applicationContext) ==

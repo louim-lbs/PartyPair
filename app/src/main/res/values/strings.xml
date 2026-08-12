@@ -158,4 +158,7 @@
     <string name="sleep_needs_access">To let the current track finish, the app needs to see what is playing.</string>
     <string name="sleep_grant_access">Grant access</string>
     <string name="notification_working">Working…</string>
+    <string name="sleep_wake_title">Speakers are off</string>
+    <string name="sleep_wake_body">Switch them on and start the %1$d minute timer?</string>
+    <string name="sleep_wake_confirm">Switch on</string>
 </resources>

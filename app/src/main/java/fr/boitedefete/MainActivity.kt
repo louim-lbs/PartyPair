@@ -64,6 +64,7 @@ import fr.boitedefete.ui.MusicButton
 import fr.boitedefete.ui.Party
 import fr.boitedefete.ui.SetupScreen
 import fr.boitedefete.ui.SleepDialog
+import fr.boitedefete.ui.SleepWakeDialog
 import fr.boitedefete.ui.SettingsScreen
 import fr.boitedefete.ui.UpdateStatus
 import fr.boitedefete.ui.Silkscreen
@@ -230,6 +231,7 @@ class MainActivity : ComponentActivity() {
                             onSettings = { screen = Screen.SETTINGS },
                             onCycleBass = ::cycleBassBoost,
                             onSleepTimer = ::setSleepTimer,
+                            onSleepTimerWhenReady = ::setSleepTimerWhenReady,
                             onRequestPlaybackAccess = ::openPlaybackAccessSettings,
                             onToggleAlarm = ::toggleAlarm,
                             bluetoothReady = bluetoothReady(),
@@ -385,6 +387,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Arme la minuterie une fois les enceintes pretes.
+     *
+     * Le reveil prend une dizaine de secondes : les compter dans le decompte
+     * reviendrait a raccourcir l'ecoute demandee.
+     */
+    private fun setSleepTimerWhenReady(minutes: Int) {
+        lifecycleScope.launch {
+            val deadline = System.currentTimeMillis() + Config.CONNECT_TIMEOUT_MS * 3
+            while (System.currentTimeMillis() < deadline) {
+                val step = PartyService.state.value.step
+                if (step == Step.READY) break
+                if (step == Step.FAILED || step == Step.IDLE) return@launch
+                delay(500)
+            }
+            SleepTimer.schedule(this@MainActivity, minutes)
+        }
+    }
+
     private fun setSleepTimer(minutes: Int?) {
         if (minutes == null) SleepTimer.cancel(this) else SleepTimer.schedule(this, minutes)
     }
@@ -534,6 +555,7 @@ private fun PartyScreen(
     onSettings: () -> Unit,
     onCycleBass: () -> Int,
     onSleepTimer: (Int?) -> Unit,
+    onSleepTimerWhenReady: (Int) -> Unit,
     onRequestPlaybackAccess: () -> Unit,
     onToggleAlarm: () -> Boolean,
     bluetoothReady: Boolean,
@@ -560,6 +582,8 @@ private fun PartyScreen(
         }
     }
     var sleepDialog by remember { mutableStateOf(false) }
+    // Minuterie demandee alors que rien ne joue : on demande avant de lancer.
+    var sleepPendingWake by remember { mutableStateOf<Int?>(null) }
     var standbyDialog by remember { mutableStateOf(false) }
 
     // Des que les enceintes sont pretes, on prepare la liaison : le premier
@@ -609,14 +633,34 @@ private fun PartyScreen(
         )
     }
 
+    sleepPendingWake?.let { minutes ->
+        SleepWakeDialog(
+            minutes = minutes,
+            onWakeAndSchedule = {
+                sleepPendingWake = null
+                onPress()
+                // Le decompte demarre quand les enceintes jouent, pas pendant
+                // leur reveil : sinon les premieres minutes seraient perdues.
+                onSleepTimerWhenReady(minutes)
+            },
+            onDismiss = { sleepPendingWake = null }
+        )
+    }
+
     if (sleepDialog) {
         SleepDialog(
             activeMinutes = sleepLeft,
             canWatchPlayback = MediaSessions.isAllowed(context),
             onRequestPlaybackAccess = onRequestPlaybackAccess,
             onPick = { minutes ->
-                onSleepTimer(minutes)
                 sleepDialog = false
+                when {
+                    minutes == null -> onSleepTimer(null)
+                    // Programmer une extinction sur des enceintes eteintes n'a
+                    // pas de sens : on propose de les allumer d'abord.
+                    state.step == Step.READY -> onSleepTimer(minutes)
+                    else -> sleepPendingWake = minutes
+                }
             },
             onDismiss = { sleepDialog = false }
         )
