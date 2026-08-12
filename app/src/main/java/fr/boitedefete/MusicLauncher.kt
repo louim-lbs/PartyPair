@@ -7,9 +7,7 @@ import android.app.PendingIntent
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
-import android.content.ComponentName
 import android.media.AudioManager
-import android.media.session.MediaSessionManager
 import android.net.Uri
 import android.provider.MediaStore
 import android.view.KeyEvent
@@ -78,23 +76,16 @@ object MusicLauncher {
     }
 
     /**
-     * Vrai si l'application musicale choisie detient une session media.
+     * Demande la lecture au bon lecteur.
      *
-     * La touche « lecture » va toujours au dernier lecteur ayant eu le focus,
-     * sans qu'on puisse la diriger. Verifier a qui elle parviendrait evite de
-     * relancer une video mise en pause a la place de la playlist attendue.
+     * S'adresser directement a sa session est la seule facon fiable : la touche
+     * media part chez le dernier lecteur ayant eu le focus, qui peut tres bien
+     * etre une video mise en pause plus tot.
      *
-     * La lecture des sessions demande une autorisation que l'application n'a
-     * pas : sans elle, on repond « inconnu » plutot que d'affirmer a tort.
+     * @return vrai si la commande a ete adressee au lecteur voulu.
      */
-    private fun ownsMediaSession(context: Context, packageName: String): Boolean? {
-        val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE)
-            as? MediaSessionManager ?: return null
-        return runCatching {
-            val component = ComponentName(context, NotificationListener::class.java)
-            manager.getActiveSessions(component).any { it.packageName == packageName }
-        }.getOrNull()
-    }
+    private fun playDirectly(context: Context, packageName: String): Boolean =
+        MediaSessions.play(context, packageName)
 
     /**
      * Enchaine l'ouverture et la lecture.
@@ -125,15 +116,15 @@ object MusicLauncher {
         if (isPlaying(context)) return
         val packageName = settings.musicApp ?: return
 
+        // S'adresser a la session du lecteur fonctionne meme en arriere-plan,
+        // et vise juste : c'est la premiere chose a tenter.
+        if (playDirectly(context, packageName)) {
+            delay(1_500)
+            if (isPlaying(context)) return
+        }
+
         if (!foreground) {
             // Sans fenetre visible, aucune application ne peut etre ouverte.
-            // La touche « lecture » reste la seule voie — mais uniquement si
-            // elle atteindra le bon lecteur.
-            if (ownsMediaSession(context, packageName) != false) {
-                play(context)
-                delay(2_500)
-                if (isPlaying(context)) return
-            }
             notifyManualStart(context)
             return
         }
@@ -159,11 +150,12 @@ object MusicLauncher {
         }
 
         if (!launch(context, packageName)) return
-        // Ouvrir d'abord donne le focus media au bon lecteur : la touche
-        // « lecture » a alors des chances de lui parvenir plutot qu'a la
-        // derniere application ayant joue quelque chose.
         delay(3_000)
-        if (ownsMediaSession(context, packageName) != false) play(context)
+        // Le lecteur vient d'etre ouvert : sa session existe desormais.
+        if (playDirectly(context, packageName)) return
+        // Faute de mieux, la touche media — mais seulement si aucun autre
+        // lecteur ne risque de l'intercepter.
+        if (MediaSessions.playingController(context) == null) play(context)
     }
 
     /**

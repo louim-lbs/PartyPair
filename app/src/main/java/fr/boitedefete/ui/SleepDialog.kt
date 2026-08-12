@@ -22,6 +22,9 @@ import fr.boitedefete.SleepTimer
 @Composable
 fun SleepDialog(
     activeMinutes: Int?,
+    /** Faux quand l'application ne peut pas lire la lecture en cours. */
+    canWatchPlayback: Boolean,
+    onRequestPlaybackAccess: () -> Unit,
     onPick: (Int?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -54,6 +57,24 @@ fun SleepDialog(
                         .fillMaxWidth()
                         .clickable { onPick(minutes) }
                         .padding(vertical = 13.dp)
+                )
+            }
+
+            if (!canWatchPlayback) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    stringResource(R.string.sleep_needs_access),
+                    style = Body.copy(fontSize = 13.sp),
+                    color = Party.Muted
+                )
+                Text(
+                    stringResource(R.string.sleep_grant_access),
+                    style = Body.copy(fontSize = 15.sp),
+                    color = LocalAccent.current,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onRequestPlaybackAccess)
+                        .padding(vertical = 12.dp)
                 )
             }
 

@@ -1,9 +1,7 @@
 package fr.boitedefete
 
-import android.content.ComponentName
 import android.content.Context
 import android.media.session.MediaController
-import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
@@ -124,13 +122,13 @@ object PlaybackWatcher {
         return "$title|$artist|$duration".takeIf { it != "||0" }
     }
 
-    /** Lecteur actif, ou null si l'autorisation manque ou si rien ne joue. */
-    private fun controller(context: Context): MediaController? {
-        val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE)
-            as? MediaSessionManager ?: return null
-        return runCatching {
-            val component = ComponentName(context, NotificationListener::class.java)
-            manager.getActiveSessions(component).firstOrNull()
-        }.getOrNull()
-    }
+    /**
+     * Lecteur a surveiller.
+     *
+     * Celui qui joue en priorite ; a defaut celui que l'utilisateur a choisi,
+     * qui vient peut-etre d'etre mis en pause.
+     */
+    private fun controller(context: Context): MediaController? =
+        MediaSessions.playingController(context)
+            ?: Settings(context).musicApp?.let { MediaSessions.controllerFor(context, it) }
 }

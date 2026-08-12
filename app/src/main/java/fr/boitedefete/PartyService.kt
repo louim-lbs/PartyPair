@@ -69,9 +69,9 @@ class PartyService : Service() {
                     report(Step.READY)
                 }
                 ACTION_WAKE -> {
-                    // Declenche par l'alarme : aucune fenetre ne peut s'ouvrir,
-                    // on lance donc la musique directement.
-                    awaitBluetooth()
+                    // Repli quand l'activite de declenchement n'a pas pu etre
+                    // lancee : la musique passera alors par la notification.
+                    controller.awaitBluetooth()
                     controller.run(report)
                     MusicLauncher.openAndPlay(applicationContext, Settings(applicationContext))
                 }
@@ -139,25 +139,6 @@ class PartyService : Service() {
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
-    }
-
-    /**
-     * Patiente le temps que le Bluetooth revienne.
-     *
-     * Le mode sommeil coupe les radios et ne les retablit qu'a son extinction :
-     * un reveil declenche trop tot trouverait le Bluetooth encore eteint.
-     */
-    private suspend fun awaitBluetooth() {
-        val manager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return
-        val deadline = System.currentTimeMillis() + Config.BLUETOOTH_WAIT_MS
-        while (System.currentTimeMillis() < deadline) {
-            if (manager.adapter?.isEnabled == true) {
-                // Laisser la pile finir de s'initialiser avant de solliciter les enceintes.
-                kotlinx.coroutines.delay(Config.BLUETOOTH_SETTLE_MS)
-                return
-            }
-            kotlinx.coroutines.delay(2_000)
-        }
     }
 
     /** Notification persistante decrivant l'echec, avec l'enceinte en cause. */

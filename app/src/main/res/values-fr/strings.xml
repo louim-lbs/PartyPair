@@ -150,4 +150,6 @@
     <string name="step_waiting_track">Attente de la fin du morceau</string>
     <string name="sleep_after_track">Extinction à la fin de ce morceau.</string>
     <string name="sleep_stop_now">Éteindre</string>
+    <string name="sleep_needs_access">Pour laisser finir le morceau en cours, l\'application doit voir ce qui est en lecture.</string>
+    <string name="sleep_grant_access">Accorder l\'accès</string>
 </resources>

@@ -81,6 +81,7 @@
                 <action android:name="fr.boitedefete.action.POWER_OFF" />
                 <action android:name="fr.boitedefete.action.TOGGLE" />
                 <action android:name="fr.boitedefete.action.PLAY_MUSIC" />
+                <action android:name="fr.boitedefete.action.WAKE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

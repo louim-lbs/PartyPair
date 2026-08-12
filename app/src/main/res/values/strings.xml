@@ -155,4 +155,6 @@
     <string name="step_waiting_track">Waiting for the track to end</string>
     <string name="sleep_after_track">Switching off when this track ends.</string>
     <string name="sleep_stop_now">Switch off</string>
+    <string name="sleep_needs_access">To let the current track finish, the app needs to see what is playing.</string>
+    <string name="sleep_grant_access">Grant access</string>
 </resources>

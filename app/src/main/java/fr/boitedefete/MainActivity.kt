@@ -229,6 +229,7 @@ class MainActivity : ComponentActivity() {
                             onSettings = { screen = Screen.SETTINGS },
                             onCycleBass = ::cycleBassBoost,
                             onSleepTimer = ::setSleepTimer,
+                            onRequestPlaybackAccess = ::openPlaybackAccessSettings,
                             onToggleAlarm = ::toggleAlarm,
                             bluetoothReady = bluetoothReady(),
                             onEnableBluetooth = ::askEnableBluetooth
@@ -417,6 +418,18 @@ class MainActivity : ComponentActivity() {
         AlarmScheduler.reschedule(this)
     }
 
+    /**
+     * Emmene au reglage d'acces aux notifications.
+     *
+     * C'est la seule voie qu'Android offre pour lire la lecture en cours, dont
+     * dependent l'attente de fin de morceau et le choix du bon lecteur.
+     */
+    private fun openPlaybackAccessSettings() {
+        runCatching {
+            startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
+    }
+
     /** Emmene aux reglages de notifications de l'application. */
     private fun openNotificationSettings() {
         runCatching {
@@ -520,6 +533,7 @@ private fun PartyScreen(
     onSettings: () -> Unit,
     onCycleBass: () -> Int,
     onSleepTimer: (Int?) -> Unit,
+    onRequestPlaybackAccess: () -> Unit,
     onToggleAlarm: () -> Boolean,
     bluetoothReady: Boolean,
     onEnableBluetooth: () -> Unit
@@ -585,6 +599,8 @@ private fun PartyScreen(
     if (sleepDialog) {
         SleepDialog(
             activeMinutes = sleepLeft,
+            canWatchPlayback = MediaSessions.isAllowed(context),
+            onRequestPlaybackAccess = onRequestPlaybackAccess,
             onPick = { minutes ->
                 onSleepTimer(minutes)
                 sleepDialog = false

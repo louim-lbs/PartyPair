@@ -110,7 +110,18 @@ class AlarmReceiver : BroadcastReceiver() {
             ACTION_CANCEL_SLEEP -> SleepTimer.cancel(context)
             ACTION_SLEEP_TICK -> SleepTimer.refresh(context)
             ACTION_WAKE -> {
-                PartyService.start(context, PartyService.ACTION_WAKE)
+                // Passer par l'activite de declenchement plutot que par le
+                // service : elle seule pourra ouvrir le lecteur le moment venu.
+                // Le service reste le repli si le systeme refuse l'activite.
+                val launched = runCatching {
+                    context.startActivity(
+                        Intent(context, TriggerActivity::class.java)
+                            .setAction(PartyService.ACTION_WAKE)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                    true
+                }.getOrDefault(false)
+                if (!launched) PartyService.start(context, PartyService.ACTION_WAKE)
                 // Preparer la suivante des maintenant.
                 AlarmScheduler.reschedule(context)
             }

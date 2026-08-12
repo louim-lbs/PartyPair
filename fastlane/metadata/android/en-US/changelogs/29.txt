@@ -1,0 +1,1 @@
+Wake-up now starts the music reliably, and targets the right player.

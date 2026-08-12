@@ -522,6 +522,26 @@ class PartyController(private val context: Context) {
         } ?: false
     }
 
+    /**
+     * Patiente le temps que le Bluetooth revienne.
+     *
+     * Le mode sommeil coupe les radios et ne les retablit qu'a son extinction :
+     * un reveil declenche trop tot trouverait le Bluetooth encore eteint.
+     */
+    suspend fun awaitBluetooth() {
+        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+            ?: return
+        val deadline = System.currentTimeMillis() + Config.BLUETOOTH_WAIT_MS
+        while (System.currentTimeMillis() < deadline) {
+            if (manager.adapter?.isEnabled == true) {
+                // Laisser la pile finir de s'initialiser avant de solliciter les enceintes.
+                delay(Config.BLUETOOTH_SETTLE_MS)
+                return
+            }
+            delay(2_000)
+        }
+    }
+
     /** Rompt la paire stereo sans eteindre. */
     suspend fun unlink() {
         // Deux clients GATT vers la meme enceinte ne serviraient a rien.

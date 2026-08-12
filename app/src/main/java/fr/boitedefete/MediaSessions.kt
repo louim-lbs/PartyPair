@@ -1,0 +1,62 @@
+package fr.boitedefete
+
+import android.content.ComponentName
+import android.content.Context
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.provider.Settings as AndroidSettings
+
+/**
+ * Acces aux lecteurs en cours.
+ *
+ * Android ne laisse lire les sessions media qu'aux services d'ecoute de
+ * notifications. C'est la seule voie pour savoir qui joue quoi, et surtout pour
+ * s'adresser a un lecteur precis plutot que d'envoyer une touche media dans le
+ * vide, qui atterrit chez le dernier ayant eu le focus.
+ */
+object MediaSessions {
+
+    /** Vrai si le systeme nous laisse lire les sessions. */
+    fun isAllowed(context: Context): Boolean {
+        val enabled = AndroidSettings.Secure.getString(
+            context.contentResolver,
+            "enabled_notification_listeners"
+        ).orEmpty()
+        return enabled.contains(context.packageName)
+    }
+
+    /** Sessions actives, ou liste vide si l'autorisation manque. */
+    private fun sessions(context: Context): List<MediaController> {
+        val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE)
+            as? MediaSessionManager ?: return emptyList()
+        return runCatching {
+            manager.getActiveSessions(ComponentName(context, NotificationListener::class.java))
+        }.getOrDefault(emptyList())
+    }
+
+    /**
+     * Session du lecteur demande.
+     *
+     * Prendre la premiere de la liste revenait a tirer au sort : plusieurs
+     * applications gardent une session ouverte apres une pause, et l'ordre ne
+     * dit rien de la derniere utilisee.
+     */
+    fun controllerFor(context: Context, packageName: String): MediaController? =
+        sessions(context).firstOrNull { it.packageName == packageName }
+
+    /** Session en cours de lecture, quel que soit le lecteur. */
+    fun playingController(context: Context): MediaController? =
+        sessions(context).firstOrNull {
+            it.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING
+        }
+
+    /**
+     * Demande la lecture au lecteur voulu, sans passer par la touche media.
+     *
+     * @return vrai si la commande a pu etre adressee.
+     */
+    fun play(context: Context, packageName: String): Boolean {
+        val controller = controllerFor(context, packageName) ?: return false
+        return runCatching { controller.transportControls.play() }.isSuccess
+    }
+}
