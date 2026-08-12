@@ -57,15 +57,14 @@ class PartyController(private val context: Context) {
         // connaitre l'etat de la paire, elle est donc reveillee la premiere.
         // Quand la connexion existe deja, on la reprend au lieu d'en ouvrir une
         // seconde — et on evite d'annoncer un reveil qui a deja eu lieu.
-        // Meme quand la liaison est deja ouverte, l'etape doit etre annoncee :
-        // la sauter donnait l'impression que la principale avait ete oubliee.
-        subject = Elision.subject(primaryDevice.name)
-        onStep(Step.WAKING_PRIMARY)
+        // L'annonce precede la connexion : c'est elle qui prend du temps, et
+        // c'est pendant ce temps que le message doit etre lisible. Quand la
+        // liaison est heritee, l'appelant a deja annonce l'etape.
         val primary = if (opened != null) {
-            // Deja reveillee a l'etape precedente : laisser le message se lire.
-            delay(Config.STEP_VISIBLE_MS)
             opened
         } else {
+            subject = Elision.subject(primaryDevice.name)
+            onStep(Step.WAKING_PRIMARY)
             connect(adapter, primaryDevice).also { it.awaitReady(Config.READY_TIMEOUT_MS) }
         }
 
@@ -74,6 +73,9 @@ class PartyController(private val context: Context) {
             // La secondaire peut etre debranchee ou hors de portee. Dans ce cas
             // on continue avec la principale : de la musique sur une enceinte
             // vaut mieux que le silence sur deux.
+            // Laisser le message precedent se lire : la principale est parfois
+            // deja prete, et l'etape passerait sinon en un eclair.
+            delay(Config.STEP_VISIBLE_MS)
             subject = Elision.subject(secondaryDevice.name)
             onStep(Step.WAKING_SECONDARY)
             val secondary = runCatching { connect(adapter, secondaryDevice) }.getOrNull()
@@ -193,6 +195,12 @@ class PartyController(private val context: Context) {
             run(onStep)
             return
         }
+
+        // La connexion a reveille l'enceinte : on peut le dire avant meme de
+        // savoir ce qui suivra, et l'interrogation de l'etat se fait sous ce
+        // message plutot que sous un « Connexion » qui n'a plus cours.
+        subject = Elision.subject(primaryDevice.name)
+        onStep(Step.WAKING_PRIMARY)
 
         val linked = runCatching { link.isStereoLinked() }.getOrDefault(false)
 

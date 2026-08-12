@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -545,7 +546,19 @@ private fun PartyScreen(
     var alarmOn by remember { mutableStateOf(settings.alarmEnabled) }
     // Echeance partagee : annuler depuis la notification se voit ici sans delai.
     val sleepAt by SleepTimer.deadline.collectAsState()
-    val sleepLeft = SleepTimer.remainingMinutes(sleepAt)
+    // Un compte a rebours doit descendre tout seul : sans ce battement, l'ecran
+    // gardait la valeur figee a son ouverture et divergeait de la notification.
+    var sleepLeft by remember(sleepAt) { mutableStateOf(SleepTimer.remainingMinutes(sleepAt)) }
+    LaunchedEffect(sleepAt) {
+        while (sleepAt > 0L) {
+            val left = SleepTimer.remainingMinutes(sleepAt)
+            sleepLeft = left
+            if (left == null) break
+            // Se caler sur le changement de minute, comme la notification.
+            val untilNextMinute = (sleepAt - System.currentTimeMillis()) % 60_000L
+            delay(if (untilNextMinute > 1_000L) untilNextMinute else 60_000L)
+        }
+    }
     var sleepDialog by remember { mutableStateOf(false) }
     var standbyDialog by remember { mutableStateOf(false) }
 

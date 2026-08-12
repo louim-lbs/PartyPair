@@ -152,4 +152,5 @@
     <string name="sleep_stop_now">Éteindre</string>
     <string name="sleep_needs_access">Pour laisser finir le morceau en cours, l\'application doit voir ce qui est en lecture.</string>
     <string name="sleep_grant_access">Accorder l\'accès</string>
+    <string name="notification_working">En cours…</string>
 </resources>

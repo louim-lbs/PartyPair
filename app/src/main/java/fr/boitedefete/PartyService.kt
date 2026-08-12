@@ -31,9 +31,16 @@ class PartyService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.app_name)))
-
         val action = intent?.action ?: ACTION_START
+
+        // L'echeance de la minuterie porte deja sa propre notification : celle
+        // du service ferait doublon a l'ecran.
+        val initial = when (action) {
+            ACTION_SLEEP_DUE -> getString(R.string.step_waiting_track)
+            ACTION_POWER_OFF -> getString(Step.FADING_OUT.label)
+            else -> getString(R.string.notification_working)
+        }
+        startForeground(NOTIFICATION_ID, buildNotification(initial))
 
         // Les reglages rapides sont courts et sans effet de bord : les ecarter
         // parce qu'une autre tache tourne revenait a perdre l'appui. Ils sont
@@ -88,12 +95,19 @@ class PartyService : Service() {
                         // notification du service ferait doublon a l'ecran.
                         silent = true
                         state.value = UiState(Step.WAITING_TRACK)
+                        // Le service passe la main : une seule notification.
+                        stopForeground(STOP_FOREGROUND_REMOVE)
                         SleepTimer.showWaitingForTrack(applicationContext)
                         PlaybackWatcher.awaitTrackEnd(applicationContext) {
                             SleepTimer.showWaitingForTrack(applicationContext)
                         }
                         SleepTimer.dismiss(applicationContext)
                         silent = false
+                        // Reprendre la main pour la suite de l'extinction.
+                        startForeground(
+                            NOTIFICATION_ID,
+                            buildNotification(getString(Step.FADING_OUT.label))
+                        )
                     }
                     controller.powerOff(report)
                 }
@@ -188,8 +202,9 @@ class PartyService : Service() {
     private fun buildNotification(text: String): Notification {
         ensureChannel(getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(text)
+            // Le titre porte l'etape en cours : le nom de l'application est deja
+            // affiche par le systeme au-dessus de la notification.
+            .setContentTitle(text)
             .setSmallIcon(R.drawable.ic_driver)
             .setOngoing(true)
             .build()

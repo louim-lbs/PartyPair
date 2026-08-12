@@ -157,4 +157,5 @@
     <string name="sleep_stop_now">Switch off</string>
     <string name="sleep_needs_access">To let the current track finish, the app needs to see what is playing.</string>
     <string name="sleep_grant_access">Grant access</string>
+    <string name="notification_working">Working…</string>
 </resources>
