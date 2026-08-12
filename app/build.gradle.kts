@@ -22,8 +22,8 @@ android {
         targetSdk = 35
         // Compteur interne, strictement croissant : Android refuse d'installer
         // une version dont le code est inferieur a celle deja presente.
-        versionCode = 29
-        versionName = "1.1.1"
+        versionCode = 30
+        versionName = "1.1.2"
 
         buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
     }

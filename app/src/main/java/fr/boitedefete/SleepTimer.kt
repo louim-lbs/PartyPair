@@ -88,7 +88,9 @@ object SleepTimer {
         if (at <= 0L) return null
         val left = at - System.currentTimeMillis()
         if (left <= 0L) return null
-        return (TimeUnit.MILLISECONDS.toMinutes(left) + 1).toInt()
+        // Arrondi au superieur : « 1 min » doit rester affiche jusqu'a l'echeance,
+        // et l'ecran comme la notification lisent la meme valeur au meme instant.
+        return Math.ceil(left / 60_000.0).toInt().coerceAtLeast(1)
     }
 
     /**
@@ -106,7 +108,7 @@ object SleepTimer {
         }
         deadline.value = at
         notify(context, minutes)
-        scheduleTick(context)
+        scheduleTick(context, at)
     }
 
     /**
@@ -154,12 +156,22 @@ object SleepTimer {
         return runCatching { manager.areNotificationsEnabled() }.getOrDefault(false)
     }
 
-    private fun scheduleTick(context: Context) {
+    /**
+     * Programme le rafraichissement suivant sur le changement de minute.
+     *
+     * Se caler sur l'echeance plutot que sur l'instant courant evite que le
+     * texte de la notification derive de celui affiche dans l'application.
+     */
+    private fun scheduleTick(context: Context, deadlineAt: Long) {
         val manager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val nextMinute = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
-        // Echeance approchee : le decompte peut retarder de quelques secondes
-        // sans consequence, et le telephone n'a pas a se reveiller pour si peu.
-        runCatching { manager.set(AlarmManager.RTC, nextMinute, tickIntent(context)) }
+        val left = deadlineAt - System.currentTimeMillis()
+        if (left <= 0) return
+        val untilNextMinute = left % 60_000L
+        val next = System.currentTimeMillis() +
+            if (untilNextMinute > 1_000L) untilNextMinute else 60_000L
+        // Echeance approchee : quelques secondes de retard sont sans consequence,
+        // et le telephone n'a pas a se reveiller pour si peu.
+        runCatching { manager.set(AlarmManager.RTC, next, tickIntent(context)) }
     }
 
     private fun notify(context: Context, minutes: Int) {

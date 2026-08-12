@@ -28,7 +28,15 @@ object PlaybackWatcher {
     /** Repit accorde a une pause : un appel telephonique n'est pas une fin d'ecoute. */
     private val PAUSE_GRACE_MS = TimeUnit.SECONDS.toMillis(30)
 
-    private const val POLL_MS = 1_000L
+    private const val POLL_MS = 500L
+
+    /**
+     * Avance sur la fin du morceau.
+     *
+     * Attendre la fin exacte laissait le titre suivant demarrer et lacher
+     * quelques notes avant le fondu : mieux vaut couper un instant plus tot.
+     */
+    private val LEAD_OUT_MS = TimeUnit.SECONDS.toMillis(2)
 
     /** Ce que l'appelant doit faire de l'echeance. */
     enum class Verdict {
@@ -81,7 +89,9 @@ object PlaybackWatcher {
                     pausedSince = null
                     val remaining = remainingMs(context)
                     if (remaining != null) {
-                        if (remaining <= POLL_MS) return
+                        // On rend la main avant la fin reelle, le temps que le
+                        // fondu s'amorce sur le morceau en cours.
+                        if (remaining <= LEAD_OUT_MS) return
                         // La duree est connue : le garde-fou n'a plus lieu d'etre.
                         blindDeadline = System.currentTimeMillis() + remaining + POLL_MS
                     } else if (System.currentTimeMillis() > blindDeadline) {
@@ -103,14 +113,27 @@ object PlaybackWatcher {
         }
     }
 
-    /** Temps restant sur le morceau en cours, ou null s'il n'est pas connu. */
+    /**
+     * Temps restant sur le morceau en cours, ou null s'il n'est pas connu.
+     *
+     * La position rapportee date du dernier rafraichissement de l'etat : on la
+     * projette jusqu'a maintenant, sans quoi le compte serait fige.
+     */
     private fun remainingMs(context: Context): Long? {
         val controller = controller(context) ?: return null
         val duration = controller.metadata
             ?.getLong(android.media.MediaMetadata.METADATA_KEY_DURATION)
             ?.takeIf { it > 0 } ?: return null
-        val position = controller.playbackState?.position?.takeIf { it >= 0 } ?: return null
-        return (duration - position).takeIf { it >= 0 }
+        val state = controller.playbackState ?: return null
+        val position = state.position.takeIf { it >= 0 } ?: return null
+
+        val elapsed = if (state.state == PlaybackState.STATE_PLAYING && state.lastPositionUpdateTime > 0) {
+            ((android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime)
+                * state.playbackSpeed).toLong().coerceAtLeast(0)
+        } else {
+            0L
+        }
+        return (duration - position - elapsed).coerceAtLeast(0)
     }
 
     /** Identifie le morceau, pour reperer un changement de titre. */

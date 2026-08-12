@@ -53,12 +53,14 @@ class PartyService : Service() {
         if (job?.isActive == true) return START_NOT_STICKY
 
         job = launchTask { controller ->
+            // Pendant l'attente de fin de morceau, la minuterie tient l'affichage.
+            var silent = false
             val report: (Step) -> Unit = { step ->
                 state.value = UiState(step, warning = controller.warning, subject = controller.subject)
                 if (step == Step.READY && action in PROMPTING_ACTIONS) musicPrompt.value = true
                 if (step == Step.IDLE) musicPrompt.value = false
                 // Le libelle porte un parametre : sans lui, le motif reste brut.
-                notify(getString(step.label, controller.subject.orEmpty()))
+                if (!silent) notify(getString(step.label, controller.subject.orEmpty()))
                 PartyWidget.refresh(applicationContext)
             }
             when (action) {
@@ -82,13 +84,17 @@ class PartyService : Service() {
                     if (PlaybackWatcher.verdict(applicationContext) ==
                         PlaybackWatcher.Verdict.WAIT_FOR_TRACK
                     ) {
-                        report(Step.WAITING_TRACK)
+                        // La minuterie porte deja son propre message : la
+                        // notification du service ferait doublon a l'ecran.
+                        silent = true
+                        state.value = UiState(Step.WAITING_TRACK)
                         SleepTimer.showWaitingForTrack(applicationContext)
                         PlaybackWatcher.awaitTrackEnd(applicationContext) {
                             SleepTimer.showWaitingForTrack(applicationContext)
                         }
+                        SleepTimer.dismiss(applicationContext)
+                        silent = false
                     }
-                    SleepTimer.dismiss(applicationContext)
                     controller.powerOff(report)
                 }
                 ACTION_UNLINK -> {

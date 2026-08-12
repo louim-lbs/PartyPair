@@ -57,9 +57,15 @@ class PartyController(private val context: Context) {
         // connaitre l'etat de la paire, elle est donc reveillee la premiere.
         // Quand la connexion existe deja, on la reprend au lieu d'en ouvrir une
         // seconde — et on evite d'annoncer un reveil qui a deja eu lieu.
-        val primary = opened ?: run {
-            subject = Elision.subject(primaryDevice.name)
-            onStep(Step.WAKING_PRIMARY)
+        // Meme quand la liaison est deja ouverte, l'etape doit etre annoncee :
+        // la sauter donnait l'impression que la principale avait ete oubliee.
+        subject = Elision.subject(primaryDevice.name)
+        onStep(Step.WAKING_PRIMARY)
+        val primary = if (opened != null) {
+            // Deja reveillee a l'etape precedente : laisser le message se lire.
+            delay(Config.STEP_VISIBLE_MS)
+            opened
+        } else {
             connect(adapter, primaryDevice).also { it.awaitReady(Config.READY_TIMEOUT_MS) }
         }
 

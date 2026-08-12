@@ -1,0 +1,1 @@
+Music targets the chosen player; sleep timer fades before the track ends.

@@ -8,6 +8,9 @@ package fr.boitedefete
  */
 object Config {
 
+    /** Duree minimale d'affichage d'une etape, pour qu'elle soit lisible. */
+    const val STEP_VISIBLE_MS = 600L
+
     /** Delai entre l'ecriture sur la secondaire et sur la principale. */
     const val INTER_WRITE_DELAY_MS = 250L
 

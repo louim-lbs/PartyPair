@@ -116,6 +116,11 @@ object MusicLauncher {
         if (isPlaying(context)) return
         val packageName = settings.musicApp ?: return
 
+        // Faire taire les autres lecteurs d'abord : une video laissee en pause
+        // dans un navigateur reprendrait a la moindre touche media, et c'est
+        // elle qu'on entendrait a la place de la musique.
+        MediaSessions.pauseOthers(context, packageName)
+
         // S'adresser a la session du lecteur fonctionne meme en arriere-plan,
         // et vise juste : c'est la premiere chose a tenter.
         if (playDirectly(context, packageName)) {
@@ -152,6 +157,7 @@ object MusicLauncher {
         if (!launch(context, packageName)) return
         delay(3_000)
         // Le lecteur vient d'etre ouvert : sa session existe desormais.
+        MediaSessions.pauseOthers(context, packageName)
         if (playDirectly(context, packageName)) return
         // Faute de mieux, la touche media — mais seulement si aucun autre
         // lecteur ne risque de l'intercepter.
