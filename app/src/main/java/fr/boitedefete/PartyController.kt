@@ -63,9 +63,11 @@ class PartyController(private val context: Context) {
         val primary = if (opened != null) {
             opened
         } else {
+            val link = connect(adapter, primaryDevice)
+            // L'annonce precede le sondage, qui est le reveil proprement dit.
             subject = Elision.subject(primaryDevice.name)
             onStep(Step.WAKING_PRIMARY)
-            connect(adapter, primaryDevice).also { it.awaitReady(Config.READY_TIMEOUT_MS) }
+            link.also { it.awaitReady(Config.READY_TIMEOUT_MS) }
         }
 
         try {
@@ -187,22 +189,22 @@ class PartyController(private val context: Context) {
         subject = null
         onStep(Step.CONNECTING)
 
-        val link = runCatching {
-            connect(adapter, primaryDevice).also { it.awaitReady(Config.READY_TIMEOUT_MS) }
-        }.getOrNull()
-
+        val link = runCatching { connect(adapter, primaryDevice) }.getOrNull()
         if (link == null) {
             run(onStep)
             return
         }
 
-        // La connexion a reveille l'enceinte : on peut le dire avant meme de
-        // savoir ce qui suivra, et l'interrogation de l'etat se fait sous ce
-        // message plutot que sous un « Connexion » qui n'a plus cours.
+        // Le reveil commence ici : les commandes de sondage qui suivent sont
+        // precisement ce qui tire l'enceinte de sa veille. L'annoncer apres
+        // reviendrait a le dire une fois que c'est fini.
         subject = Elision.subject(primaryDevice.name)
         onStep(Step.WAKING_PRIMARY)
 
-        val linked = runCatching { link.isStereoLinked() }.getOrDefault(false)
+        val linked = runCatching {
+            link.awaitReady(Config.READY_TIMEOUT_MS)
+            link.isStereoLinked()
+        }.getOrDefault(false)
 
         try {
             // La connexion est deja ouverte : la reprendre fait gagner les
