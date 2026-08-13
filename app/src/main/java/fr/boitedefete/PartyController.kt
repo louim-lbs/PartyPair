@@ -252,25 +252,31 @@ class PartyController(private val context: Context) {
         onStep(Step.FADING_OUT)
         fadeOut(primary)
         primary.write(JblProtocol.POWER_OFF)
-        // Une fois l'enceinte eteinte : remonter le volume avant l'aurait rendu
-        // audible, ce qui est exactement ce que le fondu cherchait a eviter.
-        delay(Config.RESTORE_DELAY_MS)
-        restorePhoneVolume()
         onStep(Step.IDLE)
     }
 
-    /** Eteint l'enceinte secondaire, une fois le silence obtenu. */
+    /**
+     * Eteint l'enceinte secondaire, puis rend au telephone son volume.
+     *
+     * La restitution vient en dernier : remonter le niveau tant qu'une enceinte
+     * peut encore le relayer produirait exactement le sursaut que le fondu
+     * cherchait a eviter.
+     */
     private suspend fun stopSecondary() {
-        val secondaryDevice = settings.secondary ?: return
-        runCatching {
-            val secondary = connect(adapter(), secondaryDevice)
-            try {
-                secondary.write(JblProtocol.POWER_OFF)
-                delay(Config.INTER_WRITE_DELAY_MS)
-            } finally {
-                secondary.close()
+        val secondaryDevice = settings.secondary
+        if (secondaryDevice != null) {
+            runCatching {
+                val secondary = connect(adapter(), secondaryDevice)
+                try {
+                    secondary.write(JblProtocol.POWER_OFF)
+                    delay(Config.INTER_WRITE_DELAY_MS)
+                } finally {
+                    secondary.close()
+                }
             }
         }
+        delay(Config.RESTORE_DELAY_MS)
+        restorePhoneVolume()
     }
 
     /**

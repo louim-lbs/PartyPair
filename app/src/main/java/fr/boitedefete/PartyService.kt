@@ -16,6 +16,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -64,8 +65,10 @@ class PartyService : Service() {
             var silent = false
             val report: (Step) -> Unit = { step ->
                 state.value = UiState(step, warning = controller.warning, subject = controller.subject)
-                if (step == Step.READY && action in PROMPTING_ACTIONS) musicPrompt.value = true
-                if (step == Step.IDLE) musicPrompt.value = false
+                if (step == Step.READY && action in PROMPTING_ACTIONS) {
+                    musicPrompt.value = System.currentTimeMillis()
+                }
+                if (step == Step.IDLE) musicPrompt.value = 0L
                 // Le libelle porte un parametre : sans lui, le motif reste brut.
                 if (!silent) notify(getString(step.label, controller.subject.orEmpty()))
                 PartyWidget.refresh(applicationContext)
@@ -239,11 +242,22 @@ class PartyService : Service() {
         val state = MutableStateFlow(UiState(Step.IDLE))
 
         /**
-         * Vrai quand une sequence vient d'aboutir et que la musique n'a pas
-         * encore ete proposee. Vit ici plutot que dans l'ecran, sans quoi un
-         * aller-retour dans les reglages relancerait le decompte.
+         * Instant ou une sequence a abouti sans que la musique ait ete proposee.
+         *
+         * Vit ici plutot que dans l'ecran, sans quoi un aller-retour dans les
+         * reglages relancerait le decompte. Horodatee, car une proposition
+         * gardee en reserve pendant une heure surgirait a contretemps : allumer
+         * depuis le widget puis ouvrir l'application bien plus tard ne doit pas
+         * declencher un compte a rebours.
          */
-        val musicPrompt = MutableStateFlow(false)
+        val musicPrompt = MutableStateFlow(0L)
+
+        /** Duree de validite d'une proposition musicale. */
+        private val PROMPT_VALID_MS = TimeUnit.MINUTES.toMillis(2)
+
+        /** Vrai si la proposition est encore d'actualite. */
+        fun musicPromptIsFresh(at: Long): Boolean =
+            at > 0L && System.currentTimeMillis() - at < PROMPT_VALID_MS
 
         /**
          * Remet l'affichage en phase avec la realite.
@@ -279,6 +293,10 @@ class PartyService : Service() {
                     subject = Settings(context).primary?.name?.let { Elision.subject(it) }
                 )
             }
+            // Redessiner tout de suite : le widget doit repondre au doigt, sans
+            // attendre que le service ait demarre.
+            PartyWidget.refresh(context)
+
             val intent = Intent(context, PartyService::class.java).setAction(action)
             // Le systeme peut refuser un service de premier plan lance depuis
             // l'arriere-plan : on le signale sans lever d'exception, pour que

@@ -576,6 +576,8 @@ private fun PartyScreen(
             val left = SleepTimer.remainingMinutes(sleepAt)
             sleepLeft = left
             if (left == null) break
+            // Meme valeur des deux cotes tant que l'ecran est ouvert.
+            SleepTimer.realign(context)
             // Se caler sur le changement de minute, comme la notification.
             val untilNextMinute = (sleepAt - System.currentTimeMillis()) % 60_000L
             delay(if (untilNextMinute > 1_000L) untilNextMinute else 60_000L)
@@ -596,8 +598,8 @@ private fun PartyScreen(
 
     // La proposition vit dans le service, pas dans cet ecran : un aller-retour
     // dans les reglages detruirait l'etat local et relancerait le decompte.
-    val promptPending by PartyService.musicPrompt.collectAsState()
-    val showCountdown = promptPending && musicApp != null
+    val promptAt by PartyService.musicPrompt.collectAsState()
+    val showCountdown = musicApp != null && PartyService.musicPromptIsFresh(promptAt)
 
     val progress = when (state.step) {
         Step.IDLE, Step.FAILED -> 0f
@@ -670,10 +672,10 @@ private fun PartyScreen(
         CountdownDialog(
             seconds = Config.MUSIC_COUNTDOWN_SECONDS,
             onOpenNow = {
-                PartyService.musicPrompt.value = false
+                PartyService.musicPrompt.value = 0L
                 onPlayMusic()
             },
-            onDismiss = { PartyService.musicPrompt.value = false }
+            onDismiss = { PartyService.musicPrompt.value = 0L }
         )
     }
 

@@ -84,6 +84,20 @@ object SleepTimer {
     /** Minutes restantes, arrondies a la minute superieure, ou null s'il n'y a rien. */
     fun remainingMinutes(context: Context): Int? = remainingMinutes(Settings(context).sleepAt)
 
+    /**
+     * Realigne la notification sur la valeur affichee a l'ecran.
+     *
+     * Le rafraichissement passe par une alarme approchee, qui peut se declencher
+     * avec du retard : la notification affichait alors une minute de plus que
+     * l'application. Reecrire le texte quand l'ecran est ouvert supprime l'ecart
+     * la ou il est visible.
+     */
+    fun realign(context: Context) {
+        val at = Settings(context).sleepAt
+        val minutes = remainingMinutes(at) ?: return
+        notify(context, minutes)
+    }
+
     fun remainingMinutes(at: Long): Int? {
         if (at <= 0L) return null
         val left = at - System.currentTimeMillis()

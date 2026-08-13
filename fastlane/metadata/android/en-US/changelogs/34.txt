@@ -1,0 +1,1 @@
+Faster widget feedback, no stale music prompt, smoother timer shutdown.

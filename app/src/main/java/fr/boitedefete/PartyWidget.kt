@@ -38,26 +38,42 @@ class PartyWidget : AppWidgetProvider() {
         }
 
         private fun buildViews(context: Context): RemoteViews {
-            val ready = PartyService.state.value.step == Step.READY
+            val step = PartyService.state.value.step
             val views = RemoteViews(context.packageName, R.layout.widget_party)
 
-            // Icone seule : le widget tient dans une case et se pose sur
-            // n'importe quel fond d'ecran.
-            views.setImageViewResource(
-                R.id.widget_icon,
-                if (ready) R.drawable.ic_widget_on else R.drawable.ic_widget_off
-            )
+            // Trois etats plutot que deux : un coeur allume des l'appui dit que
+            // la demande est prise en compte, sans attendre que tout soit pret.
+            val busy = step !in setOf(Step.IDLE, Step.READY, Step.FAILED)
+            val icon = when {
+                busy -> R.drawable.ic_widget_busy
+                step == Step.READY -> R.drawable.ic_widget_on
+                else -> R.drawable.ic_widget_off
+            }
+            views.setImageViewResource(R.id.widget_icon, icon)
             views.setContentDescription(
                 R.id.widget_icon,
-                context.getString(if (ready) R.string.widget_on else R.string.widget_off)
+                context.getString(
+                    when {
+                        busy -> R.string.notification_working
+                        step == Step.READY -> R.string.widget_on
+                        else -> R.string.widget_off
+                    }
+                )
             )
             views.setOnClickPendingIntent(R.id.widget_root, togglePendingIntent(context))
             return views
         }
 
         private fun togglePendingIntent(context: Context): PendingIntent {
-            val intent = Intent(context, PartyService::class.java)
-                .setAction(PartyService.ACTION_TOGGLE)
+            // Quand l'etat est connu, viser directement l'action evite au
+            // controleur d'interroger l'enceinte avant de decider : la mise en
+            // veille demarre alors sans ce detour.
+            val action = if (PartyService.state.value.step == Step.READY) {
+                PartyService.ACTION_POWER_OFF
+            } else {
+                PartyService.ACTION_TOGGLE
+            }
+            val intent = Intent(context, PartyService::class.java).setAction(action)
             return PendingIntent.getForegroundService(
                 context,
                 0,
