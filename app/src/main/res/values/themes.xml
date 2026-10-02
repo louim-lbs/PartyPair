@@ -5,4 +5,18 @@
         <item name="android:navigationBarColor">#050505</item>
         <item name="android:windowBackground">#050505</item>
     </style>
+
+    <!--
+        Pour l'activite de declenchement, qui reste en vie le temps de la
+        sequence. Theme.NoDisplay ne le permet pas : il exige que l'activite se
+        termine avant la fin de son affichage, sous peine d'etre tuee.
+    -->
+    <style name="Theme.BoiteDeFete.Invisible" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

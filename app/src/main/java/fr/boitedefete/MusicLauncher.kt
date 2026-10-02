@@ -107,6 +107,9 @@ object MusicLauncher {
         foreground = visible
     }
 
+    /** Vrai si une fenetre de l'application peut ouvrir le lecteur. */
+    fun isForeground(): Boolean = foreground
+
     /**
      * @param usePlaylist quand c'est faux, on se contente d'ouvrir le lecteur et
      *   de reprendre la lecture. Imposer la playlist du reveil un soir de semaine

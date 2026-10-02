@@ -1,1 +1,0 @@
-The wake step now shows while the speaker is actually waking.

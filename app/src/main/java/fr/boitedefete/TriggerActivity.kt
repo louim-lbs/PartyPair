@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -38,7 +39,8 @@ class TriggerActivity : Activity() {
 
         when (val action = resolveAction()) {
             ACTION_PLAY_MUSIC -> playThenFinish()
-            PartyService.ACTION_WAKE -> wakeThenPlay()
+            // Allumer sans musique n'a guere d'interet : on enchaine.
+            in PLAYING_ACTIONS -> runThenPlay(action)
             else -> {
                 PartyService.start(this, action)
                 finish()
@@ -55,26 +57,35 @@ class TriggerActivity : Activity() {
     }
 
     /**
-     * Reveil : la sequence est confiee au service, mais la musique est lancee
-     * d'ici. L'activite reste en vie jusque-la, sans quoi le systeme
-     * refuserait a nouveau l'ouverture du lecteur.
+     * Lance la sequence puis la musique.
+     *
+     * La sequence revient au service, qui survivra a l'ecran eteint. Mais lui
+     * ne peut pas ouvrir le lecteur : depuis Android 10, seule une activite en
+     * a le droit. Celle-ci reste donc en vie jusqu'a ce que les enceintes
+     * soient pretes, ouvre la musique, et s'efface.
      */
-    private fun wakeThenPlay() {
+    private fun runThenPlay(action: String) {
+        PartyService.start(this, action)
         scope.launch {
-            val controller = PartyController(applicationContext)
-            // Le mode sommeil coupe les radios : elles peuvent mettre un moment
-            // a revenir apres l'extinction de l'alarme.
-            controller.awaitBluetooth()
-            // Parametre nomme : run() accepte aussi une connexion deja ouverte,
-            // et une lambda finale serait prise pour celle-ci.
-            runCatching {
-                controller.run(onStep = { step ->
-                    PartyService.state.value = UiState(step, subject = controller.subject)
-                })
+            val ready = awaitReady()
+            if (ready) {
+                MusicLauncher.openAndPlay(applicationContext, Settings(this@TriggerActivity))
             }
-            MusicLauncher.openAndPlay(applicationContext, Settings(this@TriggerActivity))
             finish()
         }
+    }
+
+    /** Attend que la sequence aboutisse. Faux si elle echoue ou traine trop. */
+    private suspend fun awaitReady(): Boolean {
+        val deadline = System.currentTimeMillis() + SEQUENCE_TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            when (PartyService.state.value.step) {
+                Step.READY -> return true
+                Step.FAILED -> return false
+                else -> delay(400)
+            }
+        }
+        return false
     }
 
     override fun onDestroy() {
@@ -104,6 +115,16 @@ class TriggerActivity : Activity() {
         const val ACTION_PLAY_MUSIC = "fr.boitedefete.action.PLAY_MUSIC"
 
         private const val STANDBY_ALIAS = "StandbyShortcut"
+
+        /** Actions apres lesquelles la musique doit demarrer. */
+        private val PLAYING_ACTIONS = setOf(
+            PartyService.ACTION_START,
+            PartyService.ACTION_TOGGLE,
+            PartyService.ACTION_WAKE
+        )
+
+        /** Au-dela, on renonce plutot que de laisser une fenetre invisible ouverte. */
+        private const val SEQUENCE_TIMEOUT_MS = 4 * 60_000L
 
         private val KNOWN_ACTIONS = setOf(
             PartyService.ACTION_START,

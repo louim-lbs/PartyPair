@@ -1,0 +1,1 @@
+Standby no longer wakes speakers that are already off; display follows the real state.

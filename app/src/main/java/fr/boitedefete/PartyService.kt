@@ -27,7 +27,6 @@ class PartyService : Service() {
 
     private val scope = MainScope()
     private var job: Job? = null
-    private val running = AtomicInteger(0)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -81,11 +80,17 @@ class PartyService : Service() {
                     report(Step.READY)
                 }
                 ACTION_WAKE -> {
-                    // Repli quand l'activite de declenchement n'a pas pu etre
-                    // lancee : la musique passera alors par la notification.
                     controller.awaitBluetooth()
                     controller.run(report)
-                    MusicLauncher.openAndPlay(applicationContext, Settings(applicationContext))
+                    // L'activite de declenchement, quand elle a pu etre lancee,
+                    // se charge de la musique : elle seule peut ouvrir une
+                    // application. Ne doubler que si elle est absente.
+                    if (!MusicLauncher.isForeground()) {
+                        MusicLauncher.openAndPlay(
+                            applicationContext,
+                            Settings(applicationContext)
+                        )
+                    }
                 }
                 ACTION_POWER_OFF -> controller.powerOff(report)
                 ACTION_SLEEP_DUE -> {
@@ -241,6 +246,12 @@ class PartyService : Service() {
         /** Etat partage avec l'interface. */
         val state = MutableStateFlow(UiState(Step.IDLE))
 
+        /** Taches en cours. Tant qu'il y en a, l'etat affiche fait foi. */
+        private val running = AtomicInteger(0)
+
+        /** Etats stables, que la realite peut corriger sans rien interrompre. */
+        private val STABLE = setOf(Step.IDLE, Step.READY, Step.FAILED)
+
         /**
          * Instant ou une sequence a abouti sans que la musique ait ete proposee.
          *
@@ -266,13 +277,29 @@ class PartyService : Service() {
          * rouvre en croyant les enceintes eteintes alors qu'elles jouent encore.
          */
         suspend fun refreshState(context: Context) {
-            if (state.value.step != Step.IDLE) return
-            val on = runCatching { PartyController(context).isAlreadyOn() }.getOrDefault(false)
-            if (on && state.value.step == Step.IDLE) {
-                // Etat retrouve, non provoque : pas de proposition musicale.
-                state.value = UiState(Step.READY)
-                PartyWidget.refresh(context)
-            }
+            if (running.get() > 0 || state.value.step !in STABLE) return
+            val on = runCatching { PartyController(context).isAlreadyOn() }.getOrNull() ?: return
+            applyRealState(context, on)
+        }
+
+        /**
+         * Aligne l'affichage sur l'etat reel des enceintes.
+         *
+         * L'etat ne vivait qu'en memoire : une enceinte eteinte a la main, mise
+         * en veille d'elle-meme ou reprise par l'application JBL laissait le
+         * widget allume a tort, et un processus relance l'affichait eteint
+         * alors qu'elle jouait. Android dit, sans rien emettre vers l'enceinte,
+         * si elle est reliee en audio : c'est cette source qui fait foi.
+         *
+         * Jamais pendant une sequence, dont les deconnexions sont voulues.
+         */
+        fun applyRealState(context: Context, on: Boolean) {
+            if (running.get() > 0 || state.value.step !in STABLE) return
+            val next = if (on) Step.READY else Step.IDLE
+            if (state.value.step == next) return
+            // Etat constate, non provoque : pas de proposition musicale.
+            state.value = UiState(next)
+            PartyWidget.refresh(context)
         }
 
         fun start(context: Context, action: String = ACTION_TOGGLE): Boolean {

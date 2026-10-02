@@ -2,7 +2,7 @@
 
 An audit of everything Party Pair exposes to the outside world, what it asks of the system, and what it does with your data.
 
-Last reviewed for version 1.0.5.
+Last reviewed for version 1.1.8.
 
 ---
 
@@ -35,8 +35,11 @@ Four entry points are reachable by other apps, which is what makes automation po
 | `TriggerActivity` | start, standby, toggle, unlink, play music |
 | `StartShortcut` / `StandbyShortcut` | launcher entries for routines |
 | `CommandReceiver` | the same actions, by broadcast |
+| `AudioLinkReceiver` | the system's audio connection events, to keep the display in sync |
 
 **None is protected by a permission.** Any app on the phone could therefore turn your speakers on or off.
+
+`AudioLinkReceiver` only ever updates what the screen and widget display; a forged event could at worst make them show the wrong state until the next real one.
 
 This is deliberate: requiring a custom permission would break Home Assistant, Tasker and Samsung routines, which cannot hold it. The trade-off seemed right given what is at stake — the worst an attacker achieves is playing with your speakers, and they must already be running code on your phone.
 

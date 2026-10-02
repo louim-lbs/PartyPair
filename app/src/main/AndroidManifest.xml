@@ -72,9 +72,8 @@
             android:name=".TriggerActivity"
             android:exported="true"
             android:excludeFromRecents="true"
-            android:noHistory="true"
             android:taskAffinity=""
-            android:theme="@android:style/Theme.NoDisplay">
+            android:theme="@style/Theme.BoiteDeFete.Invisible">
             <intent-filter>
                 <action android:name="fr.boitedefete.action.START" />
                 <action android:name="fr.boitedefete.action.UNLINK" />
@@ -150,6 +149,18 @@
                 <action android:name="fr.boitedefete.action.TOGGLE" />
                 <action android:name="fr.boitedefete.action.POWER_OFF" />
                 <action android:name="fr.boitedefete.action.UNLINK" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            Suit la liaison audio de l'enceinte principale, pour que le widget et
+            l'ecran restent fideles a la realite. N'emet rien vers l'enceinte.
+        -->
+        <receiver
+            android:name=".AudioLinkReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
 

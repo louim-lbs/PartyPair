@@ -1,1 +1,0 @@
-La minuterie propose d'allumer les enceintes, et retire bien sa notification.

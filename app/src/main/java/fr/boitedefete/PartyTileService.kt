@@ -8,6 +8,10 @@ import androidx.annotation.RequiresApi
 /**
  * Raccourci dans le volet des reglages rapides.
  * Reprend la bascule de l'ecran principal : allumer, puis mettre en veille.
+ *
+ * La musique, elle, ne suit pas : ouvrir une application depuis le volet passe
+ * par une interface qui change avec la version d'Android, pour un gain mince.
+ * Le widget et l'application s'en chargent.
  */
 @RequiresApi(Build.VERSION_CODES.N)
 class PartyTileService : TileService() {
@@ -20,8 +24,10 @@ class PartyTileService : TileService() {
     override fun onClick() {
         super.onClick()
         if (!Settings(this).isConfigured) return
+
         // Quand l'etat est connu, viser l'action directe evite au controleur
-        // d'interroger l'enceinte avant de decider.
+        // d'interroger l'enceinte avant de decider : la veille demarre sans
+        // ce detour.
         val action = if (PartyService.state.value.step == Step.READY) {
             PartyService.ACTION_POWER_OFF
         } else {

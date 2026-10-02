@@ -230,6 +230,14 @@ class PartyController(private val context: Context) {
         val primaryDevice = settings.primary
             ?: throw SpeakerException(context.getString(R.string.error_not_configured))
 
+        // Se connecter suffit a reveiller une enceinte : pour en eteindre une
+        // qui l'est deja, il ne faut surtout pas s'y connecter. On s'en remet
+        // a Android, qui sait sans rien emettre si elle est reliee en audio.
+        if (!isAlreadyOn()) {
+            onStep(Step.IDLE)
+            return
+        }
+
         runCatching {
             val primary = connect(adapter(), primaryDevice)
             try {

@@ -7,6 +7,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 /**
  * Bouton d'ecran d'accueil : un appui allume et apparie, le suivant met en veille.
@@ -22,6 +24,17 @@ class PartyWidget : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         appWidgetIds.forEach { id -> manager.updateAppWidget(id, buildViews(context)) }
+
+        // Apres un redemarrage ou un processus relance, l'etat en memoire est
+        // vierge : on le recale sur la realite avant de redessiner.
+        val pending = goAsync()
+        MainScope().launch {
+            try {
+                PartyService.refreshState(context)
+            } finally {
+                pending.finish()
+            }
+        }
     }
 
     companion object {
@@ -73,8 +86,12 @@ class PartyWidget : AppWidgetProvider() {
             } else {
                 PartyService.ACTION_TOGGLE
             }
-            val intent = Intent(context, PartyService::class.java).setAction(action)
-            return PendingIntent.getForegroundService(
+            // Passer par l'activite de declenchement, et non par le service :
+            // elle seule pourra ouvrir le lecteur une fois les enceintes pretes.
+            val intent = Intent(context, TriggerActivity::class.java)
+                .setAction(action)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            return PendingIntent.getActivity(
                 context,
                 0,
                 intent,
