@@ -272,6 +272,8 @@ class MainActivity : ComponentActivity() {
         settings.bassBoost = next
         if (PartyService.state.value.step == Step.READY) {
             PartyService.start(this, PartyService.ACTION_APPLY_BASS)
+        } else {
+            settings.pendingBassBoost = true
         }
         return next
     }
@@ -564,7 +566,8 @@ private fun PartyScreen(
     val state by PartyService.state.collectAsState()
     val context = LocalContext.current
 
-    var bass by remember { mutableStateOf(settings.bassBoost) }
+    // Relu a chaque etape : au reveil, l'application adopte le reglage de l'enceinte.
+    var bass by remember(state.step) { mutableStateOf(settings.bassBoost) }
     var alarmOn by remember { mutableStateOf(settings.alarmEnabled) }
     // Echeance partagee : annuler depuis la notification se voit ici sans delai.
     val sleepAt by SleepTimer.deadline.collectAsState()

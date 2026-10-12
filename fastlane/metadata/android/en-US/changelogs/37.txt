@@ -1,0 +1,2 @@
+- Widget and app follow the speakers when they are switched off or on by hand.
+- Bass boost set on the speaker itself is kept at startup instead of being overwritten.

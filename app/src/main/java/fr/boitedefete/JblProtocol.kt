@@ -32,12 +32,15 @@ object JblProtocol {
     private const val CMD_SET_DEV_INFO = 0x13.toByte()
     private const val CMD_REQ_PLAYER_INFO = 0x41.toByte()
     private const val CMD_SET_PLAYER_INFO = 0x43.toByte()
+    private const val CMD_REQ_BASS_BOOST = 0x61.toByte()
     private const val CMD_SET_BASS_BOOST = 0x63.toByte()
     private const val CMD_SET_PHONE_MAC = 0x84.toByte()
 
     /** Reponses attendues. */
     const val RESP_DEV_INFO = 0x12.toByte()
     const val RESP_PLAYER_INFO = 0x42.toByte()
+    /** Reponse brute, sans champs : AA 62 01 <niveau>. */
+    const val RESP_BASS_BOOST = 0x62.toByte()
 
     /** Adresse de l'enceinte partenaire, annoncee spontanement a la connexion. */
     const val NOTIFY_SECONDARY_ADDRESS = 0x85.toByte()
@@ -65,6 +68,9 @@ object JblProtocol {
 
     /** Demande l'etat du lecteur, dont le volume courant. */
     val REQ_PLAYER_INFO: ByteArray = frame(CMD_REQ_PLAYER_INFO, byteArrayOf())
+
+    /** Demande le niveau de graves regle sur l'enceinte. */
+    val REQ_BASS_BOOST: ByteArray = frame(CMD_REQ_BASS_BOOST, byteArrayOf())
 
     /** Allume l'enceinte. En pratique la connexion BLE suffit deja a la reveiller. */
     val POWER_ON: ByteArray = frame(CMD_DEVICE_ACTION, byteArrayOf(0x05))

@@ -296,9 +296,11 @@ class PartyService : Service() {
         fun applyRealState(context: Context, on: Boolean) {
             if (running.get() > 0 || state.value.step !in STABLE) return
             val next = if (on) Step.READY else Step.IDLE
-            if (state.value.step == next) return
             // Etat constate, non provoque : pas de proposition musicale.
-            state.value = UiState(next)
+            if (state.value.step != next) state.value = UiState(next)
+            // Redessine meme sans changement en memoire : apres une relance du
+            // processus, l'etat vaut deja « eteint » alors que le widget, lui,
+            // affiche encore l'ancien dessin.
             PartyWidget.refresh(context)
         }
 

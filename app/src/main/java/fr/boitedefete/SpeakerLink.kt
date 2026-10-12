@@ -110,6 +110,24 @@ class SpeakerLink private constructor(
             timeoutMs
         )?.firstOrNull()?.toInt()?.and(0xFF)
 
+    /**
+     * Niveau de graves regle sur l'enceinte (0 arret, 1 profond, 2 percutant),
+     * ou null s'il n'est pas communique. La reponse n'a pas de champs : le
+     * niveau est l'unique octet de donnees.
+     */
+    suspend fun readBassBoost(timeoutMs: Long = 3_000L): Int? = withTimeoutOrNull(timeoutMs) {
+        var found: Int? = null
+        while (found == null) {
+            write(JblProtocol.REQ_BASS_BOOST)
+            withTimeoutOrNull(PROBE_INTERVAL_MS) {
+                notifications
+                    .first { JblProtocol.commandOf(it) == JblProtocol.RESP_BASS_BOOST && it.size >= 4 }
+                    .let { found = it[3].toInt() and 0xFF }
+            }
+        }
+        found
+    }?.takeIf { it in 0..2 }
+
     /** Canal attribue a cette enceinte, ou null s'il n'est pas communique. */
     suspend fun readChannel(): Byte? =
         queryField(JblProtocol.REQ_DEVICE_INFO, JblProtocol.RESP_DEV_INFO, JblProtocol.TAG_CHANNEL)

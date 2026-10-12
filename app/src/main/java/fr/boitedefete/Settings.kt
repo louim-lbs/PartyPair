@@ -113,6 +113,11 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_BASS_BOOST, 0)
         set(value) = prefs.edit().putInt(KEY_BASS_BOOST, value.coerceIn(0, 2)).apply()
 
+    /** Graves changes dans l'application alors que les enceintes dormaient. */
+    var pendingBassBoost: Boolean
+        get() = prefs.getBoolean(KEY_PENDING_BASS_BOOST, false)
+        set(value) = prefs.edit().putBoolean(KEY_PENDING_BASS_BOOST, value).apply()
+
     /** Date du dernier controle de mise a jour, pour ne pas interroger le depot a chaque ouverture. */
     var lastUpdateCheck: Long
         get() = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
@@ -258,6 +263,7 @@ class Settings(context: Context) {
         private const val KEY_ALARM_TO = "alarm_to"
         private const val KEY_BALANCE = "balance"
         private const val KEY_BASS_BOOST = "bass_boost"
+        private const val KEY_PENDING_BASS_BOOST = "pending_bass_boost"
         private const val KEY_SLEEP_AT = "sleep_at"
         private const val KEY_CONFIRM_STANDBY = "confirm_standby"
         private const val KEY_LAST_UPDATE_CHECK = "last_update_check"

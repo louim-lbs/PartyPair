@@ -1,0 +1,2 @@
+- Le widget et l'appli suivent les enceintes allumées ou éteintes à la main.
+- Les graves réglés sur l'enceinte sont conservés au démarrage au lieu d'être écrasés.

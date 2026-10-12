@@ -424,6 +424,7 @@ class PartyController(private val context: Context) {
         WarmLink.use(context, adapter(), primaryDevice) { link ->
             link.write(JblProtocol.setBassBoost(settings.bassBoost))
         }
+        settings.pendingBassBoost = false
     }
 
     /** Ouvre la liaison a l'avance, pour que le premier reglage soit immediat. */
@@ -434,10 +435,21 @@ class PartyController(private val context: Context) {
         WarmLink.warm(context, adapter, primaryDevice)
     }
 
-    /** Applique le renforcement des graves retenu dans les reglages. */
+    /**
+     * Accorde les graves entre l'application et l'enceinte.
+     *
+     * Le reglage fait sur l'enceinte elle-meme fait foi : on le relit et on
+     * l'adopte. On n'ecrit que si l'utilisateur a change les graves dans
+     * l'application pendant que les enceintes dormaient.
+     */
     private suspend fun applyBassBoost(primary: SpeakerLink) {
-        primary.write(JblProtocol.setBassBoost(settings.bassBoost))
-        delay(150)
+        if (settings.pendingBassBoost) {
+            primary.write(JblProtocol.setBassBoost(settings.bassBoost))
+            settings.pendingBassBoost = false
+            delay(150)
+            return
+        }
+        primary.readBassBoost()?.let { settings.bassBoost = it }
     }
 
     /** Applique l'echange de canaux demande pendant que les enceintes dormaient. */

@@ -129,6 +129,7 @@ To unlink, send the same frame with `39 01 00`.
 | Volume of the main speaker | `AA 43 04 00 46 01 <level>` |
 | Volume of the secondary speaker | `AA 43 04 00 47 01 <level>` |
 | Bass boost, 0 off / 1 / 2 | `AA 63 01 <level>` |
+| Read bass boost (reply `AA 62 01 <level>`, no status byte) | `AA 61 00` |
 | Assign a channel, 1 left / 2 right | `AA 13 04 00 35 01 <channel>` |
 | Request device info | `AA 11 00` |
 | Request player info | `AA 41 00` |
